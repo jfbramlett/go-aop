@@ -40,7 +40,7 @@ type Aspect struct {
 var globalAspectMgr = aspectMgr{joinPoints: make([]joinPoint, 0), serviceName: "unknown"}
 
 func InitAOP(service string) {
-	globalAspectMgr.serviceName = service
+	globalAspectMgr = aspectMgr{joinPoints: make([]joinPoint, 0), serviceName: service}
 }
 
 func GetServiceName() string {

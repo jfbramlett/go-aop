@@ -43,7 +43,7 @@ func TestAOP(t *testing.T) {
 	}
 
 	// when
-	st := sampleStruct{collector: collector}
+	st := aopTestSampleStruct{collector: collector}
 	st.Method1("arg1", 1)
 	st.Method2("arg1", 1)
 	st.Method3("arg1", 1)
@@ -198,11 +198,11 @@ func TestMethodNameFromFullPath(t *testing.T) {
 
 }
 
-type sampleStruct struct {
+type aopTestSampleStruct struct {
 	collector		*aspectCollector
 }
 
-func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
+func (s *aopTestSampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 	var err error
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
@@ -212,7 +212,7 @@ func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
+func (s *aopTestSampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 	var err error
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
@@ -222,7 +222,7 @@ func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
+func (s *aopTestSampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	var err error
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
@@ -232,7 +232,7 @@ func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
+func (s *aopTestSampleStruct) Special(arg1 string, arg2 int) (string, error) {
 	var err error
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
@@ -242,7 +242,7 @@ func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
+func (s *aopTestSampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
 	var err error
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
