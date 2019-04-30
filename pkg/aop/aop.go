@@ -142,7 +142,7 @@ func getCallingMethod() string {
 	pc, _, _, ok := runtime.Caller(3)
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
-		return details.Name()
+		return methodNameFromFullPath(details.Name())
 	}
 
 	return UnknownMethod
