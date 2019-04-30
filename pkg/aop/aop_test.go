@@ -8,8 +8,8 @@ import (
 
 func TestAOP(t *testing.T) {
 	InitAOP("testAop")
-	RegisterAspect(".*", &LoggingAspect{})
-	RegisterAspect(".*Method1$", &CountingAspect{})
+	RegisterJoinPoint(".*", &LoggingAspect{})
+	RegisterJoinPoint(".*Method1$", &CountingAspect{})
 
 	st := SampleStruct{}
 	st.Method1("arg1", 1)
@@ -66,13 +66,13 @@ type LoggingAspect struct {
 }
 
 func (l *LoggingAspect) Before(ctx context.Context) context.Context {
-	definition := AOPFromContext(ctx)
+	definition := AspectFromContext(ctx)
 	fmt.Println("Executing logging method before " + definition.MethodName + " and " + definition.CallingMethodName)
 	return ctx
 }
 
 func (l *LoggingAspect) After(ctx context.Context, err error) context.Context {
-	definition := AOPFromContext(ctx)
+	definition := AspectFromContext(ctx)
 	fmt.Println("Executing logging method after " + definition.MethodName + " and " + definition.CallingMethodName)
 	return ctx
 }
@@ -82,13 +82,13 @@ type CountingAspect struct {
 }
 
 func (l *CountingAspect) Before(ctx context.Context) context.Context {
-	definition := AOPFromContext(ctx)
+	definition := AspectFromContext(ctx)
 	fmt.Println("Executing count method before " + definition.MethodName + " and " + definition.CallingMethodName)
 	return ctx
 }
 
 func (l *CountingAspect) After(ctx context.Context, err error) context.Context {
-	definition := AOPFromContext(ctx)
+	definition := AspectFromContext(ctx)
 	fmt.Println("Executing count method after " + definition.MethodName + " and " + definition.CallingMethodName)
 	return ctx
 }

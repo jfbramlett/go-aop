@@ -11,22 +11,10 @@ import (
 )
 
 const (
-	resultTagName  	= "result"
 	resultSuccess  	= "success"
 	resultFailure  	= "failure"
 	component      	= "go-common-timedfunc"
 )
-
-var (
-	MethodLatencyTimerName = "core_permissions_method_latency"
-	MethodLatencyTimerDescription = "Latency metrics for methods invoked within the permissions server"
-
-	ServiceNameTag = tag.MustCreateKey("service_name")
-	CallingMethodTag = tag.MustCreateKey("calling_method")
-	MethodTag = tag.MustCreateKey("method")
-	LatencyTags = []tag.Key {ServiceNameTag, CallingMethodTag, MethodTag}
-)
-
 
 type timerMetricCtxKey struct{}
 type spanCtxKey struct{}
@@ -36,20 +24,23 @@ var mySpanCtxKey = spanCtxKey{}
 
 
 var (
-	ResultTagKey = tag.MustCreateKey(resultTagName)
+	ServiceNameTag = tag.MustCreateKey("service_name")
+	CallingMethodTag = tag.MustCreateKey("calling_method")
+	MethodTag = tag.MustCreateKey("method")
+	ResultTagKey = tag.MustCreateKey("result")
 )
 
-// NewSpanFuncAspect creats a new Aspect used to wrap something as a new OpenTracing span
-func NewSpanFuncAspect(tagKeys []tag.Key) Aspect {
-	return &spanAspect{tagKeys: tagKeys}
+// NewSpanFuncAdvice creats a new Advice used to wrap something as a new OpenTracing span
+func NewSpanFuncAdvice() Advice {
+	return &spanAdvice{tagKeys: []tag.Key {ServiceNameTag, CallingMethodTag, MethodTag, ResultTagKey}}
 }
 
-type spanAspect struct {
+type spanAdvice struct {
 	tagKeys []tag.Key
 }
 
-func (s *spanAspect) Before(ctx context.Context) context.Context {
-	aop := AOPFromContext(ctx)
+func (s *spanAdvice) Before(ctx context.Context) context.Context {
+	aop := AspectFromContext(ctx)
 	if aop == nil {
 		return ctx
 	}
@@ -61,7 +52,7 @@ func (s *spanAspect) Before(ctx context.Context) context.Context {
 	return context.WithValue(ctx, mySpanCtxKey, span)
 }
 
-func (s *spanAspect) After(ctx context.Context, err error) context.Context {
+func (s *spanAdvice) After(ctx context.Context, err error) context.Context {
 	spanVal := ctx.Value(mySpanCtxKey)
 	if spanVal == nil {
 		return ctx
@@ -90,11 +81,11 @@ func (s *spanAspect) After(ctx context.Context, err error) context.Context {
 	return resultCtx
 }
 
-// NewTimedFuncAspect creates a new Aspect that will capture method execution time
-func NewTimedFuncAspect(name string, description string, tagKeys []tag.Key) Aspect {
+// NewTimedFuncAdvice creates a new Advice that will capture method execution time
+func NewTimedFuncAdvice(name string, description string) Advice {
 
 	// Build the set of prometheus labels
-	tagKeys = append(tagKeys, ResultTagKey)
+	tagKeys := []tag.Key {ServiceNameTag, CallingMethodTag, MethodTag, ResultTagKey}
 	promTags := make([]string, len(tagKeys))
 	for i, t := range tagKeys {
 		promTags[i] = t.Name()
@@ -116,27 +107,27 @@ func NewTimedFuncAspect(name string, description string, tagKeys []tag.Key) Aspe
 		fmt.Println(err)
 	}
 
-	return &timedFuncAspect{tagKeys: tagKeys, quantiles: quantiles}
+	return &timedFuncAdvice{tagKeys: tagKeys, quantiles: quantiles}
 }
 
-type timedFuncAspect struct {
+type timedFuncAdvice struct {
 	quantiles 	*prometheus.SummaryVec
 	tagKeys 	[]tag.Key
 }
 
-func (t *timedFuncAspect) Before(ctx context.Context) context.Context {
-	aop := AOPFromContext(ctx)
+func (t *timedFuncAdvice) Before(ctx context.Context) context.Context {
+	aop := AspectFromContext(ctx)
 	if aop == nil {
 		return ctx
 	}
 
-	wrappedContext := context.WithValue(addPrometheusTags(ctx, aop.Service, aop.CallingMethodName, aop.MethodName),
+	wrappedContext := context.WithValue(addPrometheusTags(ctx, GetServiceName(), aop.CallingMethodName, aop.MethodName),
 		myTimerMetricCtxKey, time.Now())
 
 	return wrappedContext
 }
 
-func (t *timedFuncAspect) After(ctx context.Context, err error) context.Context {
+func (t *timedFuncAdvice) After(ctx context.Context, err error) context.Context {
 	tStart := ctx.Value(myTimerMetricCtxKey)
 	if tStart == nil {
 		return ctx
