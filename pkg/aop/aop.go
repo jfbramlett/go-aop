@@ -8,21 +8,61 @@ import (
 	"strings"
 )
 
-const UnknownMethod = "Unknown"
+const (
+	UnknownService = "Unknown"
+	UnknownMethod = "Unknown"
+	CallingMethodDepth = 3
+	MethodDepth = 2
+)
 
 type aopCtxKey struct{}
 
 var myAopCtxKey = aopCtxKey{}
 
 
-// Advice is the implementation of the logic to perform around a given method
+// Advice is the interface implemented to handle a cross-cutting concern
 type Advice interface {
 	Before(ctx context.Context) context.Context
 	After(ctx context.Context, err error) context.Context
 }
 
+// AspectMgr is responsible for handling identifying and running our cross cutting concern
+type AspectMgr interface {
+	GetServiceName() string
+	RegisterJoinPoint(pointcut Pointcut, advice Advice)
+	Before(ctx context.Context, method string) context.Context
+	After(ctx context.Context, err error) context.Context
+}
+
+var globalAspectMgr AspectMgr
+
+// Aspect represents a specific invocation of a cross-cutting concern
+type Aspect struct {
+	MethodName        	string
+	joinPoints         	[]joinPoint
+}
+
+// Pointcut defines how we determine if a given advice is relevant to the specified method
+type Pointcut interface {
+	Matches(method string) bool
+}
+
+type regexPointcut struct {
+	pattern			string
+}
+
+func (r *regexPointcut) Matches(method string) bool {
+	matches, err := regexp.MatchString(r.pattern, method)
+	return err == nil && matches
+}
+
+// NewRegexPointcut returns a new Pointcut that uses regex pattern matching
+func NewRegexPointcut(pattern string) Pointcut {
+	return &regexPointcut{pattern: pattern}
+}
+
 type joinPoint struct {
-	pointcut 		string
+	pointcut 		Pointcut
 	advice        	Advice
 }
 
@@ -31,43 +71,28 @@ type aspectMgr struct {
 	serviceName string
 }
 
-type Aspect struct {
-	MethodName        	string
-	CallingMethodName 	string
-	joinPoints         	[]joinPoint
+// GetServiceName gets the name of the service we are running in
+func (a *aspectMgr) GetServiceName() string {
+	return a.serviceName
 }
 
-var globalAspectMgr = aspectMgr{joinPoints: make([]joinPoint, 0), serviceName: "unknown"}
-
-func InitAOP(service string) {
-	globalAspectMgr = aspectMgr{joinPoints: make([]joinPoint, 0), serviceName: service}
+// RegisterJoinPoint registers a new advice for a given pointcut. The pointcut is a regex pattern used to match against a method name
+func (a *aspectMgr) RegisterJoinPoint(pointcut Pointcut, advice Advice) {
+	a.joinPoints = append(a.joinPoints, joinPoint{pointcut: pointcut, advice: advice})
 }
 
-func GetServiceName() string {
-	return globalAspectMgr.serviceName
-}
+// Before loops over all of the registered joinpoints and executes the Before advice for those whose pointcuts match
+func (a *aspectMgr) Before(ctx context.Context, method string) context.Context {
+	ac := &Aspect{joinPoints: make([]joinPoint, 0), MethodName: method}
 
-// RegisterJoinPoint is function used to register a new advice with the given regex pointcut (will be compared
-// against the calling method
-func RegisterJoinPoint(pointcut string, advice Advice) {
-	globalAspectMgr.joinPoints = append(globalAspectMgr.joinPoints, joinPoint{pointcut: pointcut, advice: advice})
-}
-
-// Before is the function invoked at the start of a method to execute any registered joinPoints
-func Before(ctx context.Context) context.Context {
-	fullMethod := getMethod()
-	ac := &Aspect{joinPoints: make([]joinPoint, 0), CallingMethodName: getCallingMethod(),
-		MethodName: methodNameFromFullPath(fullMethod)}
-
-	for _, k := range globalAspectMgr.joinPoints {
-		matches, err := regexp.MatchString(k.pointcut, fullMethod)
-		if err == nil && matches {
+	for _, k := range a.joinPoints {
+		if k.pointcut.Matches(method) {
 			ac.joinPoints = append(ac.joinPoints, k)
 		}
 	}
 
 	if len(ac.joinPoints) > 0 {
-		ctx = contextWithAspect(ctx, ac)
+		ctx = a.contextWithAspect(ctx, ac)
 
 		for _, r := range ac.joinPoints {
 			ctx = r.advice.Before(ctx)
@@ -77,7 +102,7 @@ func Before(ctx context.Context) context.Context {
 	return ctx
 }
 
-func After(ctx context.Context, err error) context.Context {
+func (a *aspectMgr) After(ctx context.Context, err error) context.Context {
 	aop  := AspectFromContext(ctx)
 	if aop != nil {
 		for i := len(aop.joinPoints) - 1; i >= 0 ; i-- {
@@ -85,50 +110,82 @@ func After(ctx context.Context, err error) context.Context {
 		}
 	}
 
-	return removeAspectFromContext(ctx)
+	return a.removeAspectFromContext(ctx)
 }
 
-func contextWithAspect(ctx context.Context, aop *Aspect) context.Context {
-	var aopStack *stack.Stack
-	var valid bool
+func (a *aspectMgr) contextWithAspect(ctx context.Context, aop *Aspect) context.Context {
+	return PushToContext(ctx, myAopCtxKey, aop)
+}
 
-	ctxStack := ctx.Value(myAopCtxKey)
-	if ctxStack == nil {
-		aopStack = stack.New()
-		ctx = context.WithValue(ctx, myAopCtxKey, aopStack)
+func (a *aspectMgr) removeAspectFromContext(ctx context.Context) context.Context {
+	ctx, _ = PopFromContext(ctx, myAopCtxKey)
+	return ctx
+}
+
+
+
+func InitAOP(service string) {
+	globalAspectMgr = &aspectMgr{serviceName: service, joinPoints: make([]joinPoint, 0)}
+}
+
+func GetServiceName() string {
+	if globalAspectMgr != nil {
+		return globalAspectMgr.GetServiceName()
 	} else {
-		aopStack, valid = ctxStack.(*stack.Stack)
-		if !valid {
-			return ctx
-		}
+		return UnknownService
 	}
-
-	aopStack.Push(aop)
-
-	return ctx
 }
 
-func removeAspectFromContext(ctx context.Context) context.Context {
-	ctxStack := ctx.Value(myAopCtxKey)
-	if ctxStack != nil {
-		aopStack, valid := ctxStack.(*stack.Stack)
-		if valid {
-			aopStack.Pop()
-		}
+// RegisterJoinPoint is function used to register a new advice with the given regex pointcut (will be compared
+// against the calling method
+func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
+	if globalAspectMgr != nil {
+		globalAspectMgr.RegisterJoinPoint(pointcut, advice)
+	}
+}
+
+// Before is the function invoked at the start of a method to execute any registered joinPoints
+func Before(ctx context.Context, method string) context.Context {
+	if globalAspectMgr != nil {
+		return globalAspectMgr.Before(ctx, method)
+	} else {
+		return ctx
+	}
+}
+
+func After(ctx context.Context, err error) context.Context {
+	if globalAspectMgr != nil {
+		return globalAspectMgr.After(ctx, err)
+	} else {
+		return ctx
+	}
+}
+
+func GetMethodName() string {
+	pc, _, _, ok := runtime.Caller(1)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		return details.Name()
 	}
 
-	return ctx
+	return UnknownMethod
+}
+
+func MethodNameFromFullPath(fullMethod string) string {
+	idx := strings.LastIndex(fullMethod, ".")
+	if idx > 0 {
+		return fullMethod[idx+1:]
+	}
+	return fullMethod
 }
 
 func AspectFromContext(ctx context.Context) *Aspect {
 	ctxStack := ctx.Value(myAopCtxKey)
 	if ctxStack != nil {
-		aopStack, valid := ctxStack.(*stack.Stack)
-		if valid {
+		if aopStack, ok := ctxStack.(*stack.Stack); ok {
 			stackItem := aopStack.Peek()
 			if stackItem != nil {
-				aopItem, valid := stackItem.(*Aspect)
-				if valid {
+				if aopItem, ok := stackItem.(*Aspect); ok {
 					return aopItem
 				}
 			}
@@ -138,31 +195,34 @@ func AspectFromContext(ctx context.Context) *Aspect {
 	return nil
 }
 
-func getCallingMethod() string {
-	pc, _, _, ok := runtime.Caller(3)
-	details := runtime.FuncForPC(pc)
-	if ok && details != nil {
-		return methodNameFromFullPath(details.Name())
+func PushToContext(ctx context.Context, ctxKey interface{}, value interface{}) context.Context {
+	var dataStack *stack.Stack
+	var ok bool
+
+	ctxStack := ctx.Value(ctxKey)
+	if ctxStack == nil {
+		dataStack = stack.New()
+		ctx = context.WithValue(ctx, ctxKey, dataStack)
+	} else {
+		if dataStack, ok = ctxStack.(*stack.Stack); !ok {
+			return ctx
+		}
 	}
 
-	return UnknownMethod
+	dataStack.Push(value)
+
+	return ctx
 }
 
-func getMethod() string {
-	pc, _, _, ok := runtime.Caller(2)
-	details := runtime.FuncForPC(pc)
-	if ok && details != nil {
-		return details.Name()
+func PopFromContext(ctx context.Context, ctxKey interface{}) (context.Context, interface{}) {
+	var item interface{}
+
+	ctxStack := ctx.Value(ctxKey)
+	if ctxStack != nil {
+		if dataStack, ok := ctxStack.(*stack.Stack); ok {
+			item = dataStack.Pop()
+		}
 	}
 
-	return UnknownMethod
+	return ctx, item
 }
-
-func methodNameFromFullPath(fullMethod string) string {
-	idx := strings.LastIndex(fullMethod, ".")
-	if idx > 0 {
-		return fullMethod[idx+1:]
-	}
-	return fullMethod
-}
-

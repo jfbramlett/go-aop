@@ -2,8 +2,8 @@ package aop
 
 import (
 	"context"
+	"github.com/golang-collections/collections/stack"
 	"github.com/google/uuid"
-	"github.com/namely/go-common/tag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -21,29 +21,29 @@ func TestAOP(t *testing.T) {
 	collector := &aspectCollector{methodCalls: make([]methodCall, 0)}
 
 	InitAOP("testAop")
-	RegisterJoinPoint(".*Method\\d$", &loggingAspect{collector: collector})
-	RegisterJoinPoint(".*Method1$", &countingAspect{collector: collector})
+	RegisterJoinPoint(NewRegexPointcut(".*Method\\d$"), &loggingAspect{collector: collector})
+	RegisterJoinPoint(NewRegexPointcut(".*Method1$"), &countingAspect{collector: collector})
 
-	expected := []methodCall{{BeforeFrame, "Method1", "TestAOP", LoggingAdvice},
-		{BeforeFrame, "Method1", "TestAOP", CountAdvice},
-		{MethodFrame, "Method1", "", MethodAdvice},
-		{AfterFrame, "Method1", "TestAOP", CountAdvice},
-		{AfterFrame, "Method1", "TestAOP", LoggingAdvice},
-		{BeforeFrame, "Method2", "TestAOP", LoggingAdvice},
-		{MethodFrame, "Method2", "", MethodAdvice},
-		{AfterFrame, "Method2", "TestAOP", LoggingAdvice},
-		{BeforeFrame, "Method3", "TestAOP", LoggingAdvice},
-		{BeforeFrame, "privateMethod1", "Method3", LoggingAdvice},
-		{BeforeFrame, "privateMethod1", "Method3", CountAdvice},
-		{MethodFrame, "privateMethod1", "", MethodAdvice},
-		{AfterFrame, "privateMethod1", "Method3", CountAdvice},
-		{AfterFrame, "privateMethod1", "Method3", LoggingAdvice},
-		{AfterFrame, "Method3", "TestAOP", LoggingAdvice},
-		{MethodFrame, "Special", "", MethodAdvice},
+	expected := []methodCall{{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1", LoggingAdvice},
+		{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1", CountAdvice},
+		{MethodFrame, "Method1", MethodAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1", CountAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1", LoggingAdvice},
+		{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method2", LoggingAdvice},
+		{MethodFrame, "Method2", MethodAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method2", LoggingAdvice},
+		{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method3", LoggingAdvice},
+		{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).privateMethod1", LoggingAdvice},
+		{BeforeFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).privateMethod1", CountAdvice},
+		{MethodFrame, "privateMethod1", MethodAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).privateMethod1", CountAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).privateMethod1", LoggingAdvice},
+		{AfterFrame, "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method3", LoggingAdvice},
+		{MethodFrame, "Special", MethodAdvice},
 	}
 
 	// when
-	st := aopTestSampleStruct{collector: collector}
+	st := sampleStruct{collector: collector}
 	st.Method1("arg1", 1)
 	st.Method2("arg1", 1)
 	st.Method3("arg1", 1)
@@ -66,33 +66,23 @@ func TestGetServiceName(t *testing.T) {
 }
 
 
-func TestGetMethod(t *testing.T) {
+func TestGetMethodName(t *testing.T) {
 	// given
-	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/aop.TestGetMethod"
+	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/aop.TestGetMethodName"
 
 	// when
-	methodName := level1Func()
+	methodName := GetMethodName()
 
 	// then
 	assert.Equal(t, expectedMethodName, methodName)
-}
-
-func TestGetCallingMethod(t *testing.T) {
-	// given:
-	expectedCallingMethodName := "TestGetCallingMethod"
-
-	// when
-	callingMethodName := delegateCall()
-
-	// then
-	assert.Equal(t, expectedCallingMethodName, callingMethodName)
 }
 
 func TestAspectFromContext(t *testing.T) {
 	t.Run("aspect_exist", func(t *testing.T) {
 		// given
 		expectedAspect := &Aspect{}
-		ctx := contextWithAspect(context.Background(), expectedAspect)
+		mgr := aspectMgr{}
+		ctx := mgr.contextWithAspect(context.Background(), expectedAspect)
 
 		// when
 		aspect := AspectFromContext(ctx)
@@ -105,12 +95,13 @@ func TestAspectFromContext(t *testing.T) {
 		// given
 		initialAspect := &Aspect{}
 		expectedAspect := &Aspect{}
-		ctx := contextWithAspect(context.Background(), initialAspect)
-		ctx = contextWithAspect(ctx, expectedAspect)
+		mgr := aspectMgr{}
+		ctx := mgr.contextWithAspect(context.Background(), initialAspect)
+		ctx = mgr.contextWithAspect(ctx, expectedAspect)
 
 		// when
 		poppedAspect := AspectFromContext(ctx)
-		newCtx := removeAspectFromContext(ctx)
+		newCtx := mgr.removeAspectFromContext(ctx)
 		aspect := AspectFromContext(newCtx)
 
 		// then
@@ -131,55 +122,14 @@ func TestAspectFromContext(t *testing.T) {
 
 }
 
-func level1Func() string {
-	return getMethod()
-}
-
-func delegateCall() string {
-	return level2Func()
-}
-
-func level2Func() string {
-	return getCallingMethod()
-}
-
-func TestAddPrometheusTags(t *testing.T) {
-	// given
-	origCtx := context.Background()
-	source := "my source"
-	callingMethod := "calling method"
-	method := "the method"
-
-	// when
-	updatedCtx := addPrometheusTags(origCtx, source, callingMethod, method)
-
-	// then
-	assert.NotEqual(t, origCtx, updatedCtx)
-
-	tags := tag.FromContext(updatedCtx)
-
-	assert.NotNil(t, tags)
-	value, found := tags.Value(ServiceNameTag)
-	require.True(t, found)
-	assert.Equal(t, source, value)
-
-	value, found = tags.Value(CallingMethodTag)
-	require.True(t, found)
-	assert.Equal(t, callingMethod, value)
-
-	value, found = tags.Value(MethodTag)
-	require.True(t, found)
-	assert.Equal(t, method, value)
-}
-
 func TestMethodNameFromFullPath(t *testing.T) {
 	t.Run("test_full_name", func(t *testing.T) {
 		// given
 		expectedMethodName := "MyMethod"
-		fullPath := "github.com/namely/permissions/pkg/metrics." + expectedMethodName
+		fullPath := "github.com/jfbramlett/go-aop/pkg/metrics." + expectedMethodName
 
 		// when
-		methodName := methodNameFromFullPath(fullPath)
+		methodName := MethodNameFromFullPath(fullPath)
 
 		// then
 		assert.Equal(t, expectedMethodName, methodName)
@@ -190,7 +140,7 @@ func TestMethodNameFromFullPath(t *testing.T) {
 		expectedMethodName := "MyMethod"
 
 		// when
-		methodName := methodNameFromFullPath(expectedMethodName)
+		methodName := MethodNameFromFullPath(expectedMethodName)
 
 		// then
 		assert.Equal(t, expectedMethodName, methodName)
@@ -198,33 +148,112 @@ func TestMethodNameFromFullPath(t *testing.T) {
 
 }
 
-type aopTestSampleStruct struct {
+func TestPushToContext(t *testing.T) {
+	t.Run("add_to_empty", func(t *testing.T) {
+		// given
+		key := "ctxKey"
+		val := "some value"
+
+		// when
+		ctx := PushToContext(context.Background(), key, val)
+
+		// then
+		ctxVal := ctx.Value(key)
+		require.NotNil(t, ctxVal)
+
+		stackVal, valid := ctxVal.(*stack.Stack)
+		require.True(t, valid)
+		assert.Equal(t, 1, stackVal.Len())
+		assert.Equal(t, val, stackVal.Pop())
+	})
+
+	t.Run("value_already_there", func(t *testing.T) {
+		// given
+		stackVal := stack.New()
+		key := "ctxKey"
+		val1 := "some value"
+		val2 := "some other value"
+		stackVal.Push(val1)
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, key, stackVal)
+
+		// when
+		ctx = PushToContext(ctx, key, val2)
+
+		// then
+		ctxVal := ctx.Value(key)
+		require.NotNil(t, ctxVal)
+
+		stackVal, valid := ctxVal.(*stack.Stack)
+		require.True(t, valid)
+		assert.Equal(t, 2, stackVal.Len())
+		assert.Equal(t, val2, stackVal.Pop())
+		assert.Equal(t, val1, stackVal.Pop())
+	})
+}
+
+func TestPopFromContext(t *testing.T) {
+	t.Run("pop_empty", func(t *testing.T) {
+		// given
+		key := "ctxKey"
+
+		// when
+		ctx, val := PopFromContext(context.Background(), key)
+
+		// then
+		assert.NotNil(t, ctx)
+		assert.Nil(t, val)
+	})
+
+	t.Run("pop_value", func(t *testing.T) {
+		// given
+		stackVal := stack.New()
+		key := "ctxKey"
+		val1 := "some value"
+		val2 := "some other value"
+		stackVal.Push(val1)
+		stackVal.Push(val2)
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, key, stackVal)
+
+		// when
+		ctx, val := PopFromContext(ctx, key)
+
+		// then
+		assert.NotNil(t, ctx)
+		assert.Equal(t, val2, val)
+	})
+
+}
+
+
+type sampleStruct struct {
 	collector		*aspectCollector
 }
 
-func (s *aopTestSampleStruct) Method1(arg1 string, arg2 int) (string, error) {
+func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background())
+	ctx := Before(context.Background(), GetMethodName())
 	defer func() {After(ctx, err)}()
 
-	s.collector.Collect(MethodFrame, "Method1", "", MethodAdvice)
+	s.collector.Collect(MethodFrame, "Method1", MethodAdvice)
 
 	return "success", nil
 }
 
-func (s *aopTestSampleStruct) Method2(arg1 string, arg2 int) (string, error) {
+func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background())
+	ctx := Before(context.Background(), GetMethodName())
 	defer func() {After(ctx, err)}()
 
-	s.collector.Collect(MethodFrame, "Method2", "", MethodAdvice)
+	s.collector.Collect(MethodFrame, "Method2", MethodAdvice)
 
 	return "success", nil
 }
 
-func (s *aopTestSampleStruct) Method3(arg1 string, arg2 int) (string, error) {
+func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background())
+	ctx := Before(context.Background(), GetMethodName())
 	defer func() {After(ctx, err)}()
 
 	s.privateMethod1(arg1, arg2)
@@ -232,22 +261,22 @@ func (s *aopTestSampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *aopTestSampleStruct) Special(arg1 string, arg2 int) (string, error) {
+func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background())
+	ctx := Before(context.Background(), GetMethodName())
 	defer func() {After(ctx, err)}()
 
-	s.collector.Collect(MethodFrame, "Special", "", MethodAdvice)
+	s.collector.Collect(MethodFrame, "Special", MethodAdvice)
 
 	return "success", nil
 }
 
-func (s *aopTestSampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
+func (s *sampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background())
+	ctx := Before(context.Background(), GetMethodName())
 	defer func() {After(ctx, err)}()
 
-	s.collector.Collect(MethodFrame, "privateMethod1", "", MethodAdvice)
+	s.collector.Collect(MethodFrame, "privateMethod1", MethodAdvice)
 
 	return "success", nil
 }
@@ -259,13 +288,13 @@ type loggingAspect struct {
 
 func (l *loggingAspect) Before(ctx context.Context) context.Context {
 	definition := AspectFromContext(ctx)
-	l.collector.Collect(BeforeFrame, definition.MethodName, definition.CallingMethodName, LoggingAdvice)
+	l.collector.Collect(BeforeFrame, definition.MethodName, LoggingAdvice)
 	return ctx
 }
 
 func (l *loggingAspect) After(ctx context.Context, err error) context.Context {
 	definition := AspectFromContext(ctx)
-	l.collector.Collect(AfterFrame, definition.MethodName, definition.CallingMethodName, LoggingAdvice)
+	l.collector.Collect(AfterFrame, definition.MethodName, LoggingAdvice)
 	return ctx
 }
 
@@ -275,13 +304,13 @@ type countingAspect struct {
 
 func (c *countingAspect) Before(ctx context.Context) context.Context {
 	definition := AspectFromContext(ctx)
-	c.collector.Collect(BeforeFrame, definition.MethodName, definition.CallingMethodName, CountAdvice)
+	c.collector.Collect(BeforeFrame, definition.MethodName, CountAdvice)
 	return ctx
 }
 
 func (c *countingAspect) After(ctx context.Context, err error) context.Context {
 	definition := AspectFromContext(ctx)
-	c.collector.Collect(AfterFrame, definition.MethodName, definition.CallingMethodName, CountAdvice)
+	c.collector.Collect(AfterFrame, definition.MethodName, CountAdvice)
 	return ctx
 }
 
@@ -289,7 +318,6 @@ func (c *countingAspect) After(ctx context.Context, err error) context.Context {
 type methodCall struct {
 	frame					string
 	methodName				string
-	calingMethodName		string
 	op						string
 }
 
@@ -297,8 +325,8 @@ type aspectCollector struct {
 	methodCalls		[]methodCall
 }
 
-func (a *aspectCollector) Collect(frame, methodName, callingMethodName, op string) *aspectCollector {
-	a.methodCalls = append(a.methodCalls, methodCall{frame, methodName, callingMethodName, op})
+func (a *aspectCollector) Collect(frame, methodName, op string) *aspectCollector {
+	a.methodCalls = append(a.methodCalls, methodCall{frame, methodName, op})
 	return a
 }
 

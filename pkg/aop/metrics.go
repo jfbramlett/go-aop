@@ -3,40 +3,34 @@ package aop
 import (
 	"context"
 	"fmt"
-	"github.com/namely/go-common/tag"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/prometheus/client_golang/prometheus"
+	"runtime"
 	"time"
 )
 
 const (
-	resultSuccess  	= "success"
-	resultFailure  	= "failure"
-	component      	= "go-common-timedfunc"
+	resultSuccess  		= "success"
+	resultFailure  		= "failure"
+	component      		= "go-common-timedfunc"
+	serviceNameKey 		= "service_name"
+	callingMethodKey 	= "calling_method"
+	methodNameKey 		= "method"
+	resultKey 			= "result"
 )
 
 type timerMetricCtxKey struct{}
-type spanCtxKey struct{}
 
 var myTimerMetricCtxKey = timerMetricCtxKey{}
-var mySpanCtxKey = spanCtxKey{}
 
-
-var (
-	ServiceNameTag = tag.MustCreateKey("service_name")
-	CallingMethodTag = tag.MustCreateKey("calling_method")
-	MethodTag = tag.MustCreateKey("method")
-	ResultTagKey = tag.MustCreateKey("result")
-)
 
 // NewSpanFuncAdvice creats a new Advice used to wrap something as a new OpenTracing span
 func NewSpanFuncAdvice() Advice {
-	return &spanAdvice{tagKeys: []tag.Key {ServiceNameTag, CallingMethodTag, MethodTag, ResultTagKey}}
+	return &spanAdvice{}
 }
 
 type spanAdvice struct {
-	tagKeys []tag.Key
 }
 
 func (s *spanAdvice) Before(ctx context.Context) context.Context {
@@ -46,50 +40,42 @@ func (s *spanAdvice) Before(ctx context.Context) context.Context {
 	}
 
 	// establish our span
-	span, ctx := opentracing.StartSpanFromContext(ctx, aop.MethodName)
+	span, ctx := opentracing.StartSpanFromContext(ctx, MethodNameFromFullPath(aop.MethodName))
 	ext.Component.Set(span, component)
 
-	return context.WithValue(ctx, mySpanCtxKey, span)
+	return ctx
 }
 
 func (s *spanAdvice) After(ctx context.Context, err error) context.Context {
-	spanVal := ctx.Value(mySpanCtxKey)
-	if spanVal == nil {
+	aop := AspectFromContext(ctx)
+	if aop == nil {
 		return ctx
 	}
 
-	span, valid := spanVal.(opentracing.Span)
-	if !valid || span == nil {
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
 		return ctx
 	}
 
-	resultCtx := addResultTag(ctx, err)
-
-	tagMap := tag.FromContext(resultCtx)
-
-
-	values := make([]string, len(s.tagKeys))
-	for i, key := range s.tagKeys {
-		value, _ := tagMap.Value(key)
-		values[i] = value
-		span.SetTag(key.Name(), value)
+	result := resultSuccess
+	if err != nil {
+		result = resultFailure
 	}
 
+	span.SetTag(serviceNameKey, GetServiceName())
+	span.SetTag(methodNameKey, MethodNameFromFullPath(aop.MethodName))
+	span.SetTag(resultKey, result)
 
 	span.Finish()
 
-	return resultCtx
+	return ctx
 }
 
 // NewTimedFuncAdvice creates a new Advice that will capture method execution time
 func NewTimedFuncAdvice(name string, description string) Advice {
 
 	// Build the set of prometheus labels
-	tagKeys := []tag.Key {ServiceNameTag, CallingMethodTag, MethodTag, ResultTagKey}
-	promTags := make([]string, len(tagKeys))
-	for i, t := range tagKeys {
-		promTags[i] = t.Name()
-	}
+	promTags := []string {serviceNameKey, callingMethodKey, methodNameKey, resultKey}
 
 	// Create the Summary metric
 	quantiles := prometheus.NewSummaryVec(
@@ -107,12 +93,11 @@ func NewTimedFuncAdvice(name string, description string) Advice {
 		fmt.Println(err)
 	}
 
-	return &timedFuncAdvice{tagKeys: tagKeys, quantiles: quantiles}
+	return &timedFuncAdvice{quantiles: quantiles}
 }
 
 type timedFuncAdvice struct {
 	quantiles 	*prometheus.SummaryVec
-	tagKeys 	[]tag.Key
 }
 
 func (t *timedFuncAdvice) Before(ctx context.Context) context.Context {
@@ -121,70 +106,66 @@ func (t *timedFuncAdvice) Before(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	wrappedContext := context.WithValue(addPrometheusTags(ctx, GetServiceName(), aop.CallingMethodName, aop.MethodName),
-		myTimerMetricCtxKey, time.Now())
+	wrappedContext := PushToContext(ctx, myTimerMetricCtxKey, time.Now())
 
 	return wrappedContext
 }
 
 func (t *timedFuncAdvice) After(ctx context.Context, err error) context.Context {
-	tStart := ctx.Value(myTimerMetricCtxKey)
-	if tStart == nil {
+	aop := AspectFromContext(ctx)
+	if aop == nil {
 		return ctx
 	}
 
-	timerStart, valid := tStart.(time.Time)
-	if !valid {
+	timerStart, found := t.getStartTime(ctx)
+	if !found {
 		return ctx
 	}
 
-	ms := float64(time.Since(timerStart).Nanoseconds()) / 1e6
-
-	resultCtx := addResultTag(ctx, err)
-
-	tagMap := tag.FromContext(resultCtx)
-
-	values := make([]string, len(t.tagKeys))
-	for i, key := range t.tagKeys {
-		value, _ := tagMap.Value(key)
-		values[i] = value
-	}
-
-	// Log the metric
-	t.quantiles.WithLabelValues(values...).Observe(ms)
-
-	return resultCtx
-}
-
-func addResultTag(ctx context.Context, err error) context.Context {
 	result := resultSuccess
 	if err != nil {
 		result = resultFailure
 	}
 
-	// Evaluate the tags
-	updatedCtx, ctxError := tag.New(ctx, tag.Insert(ResultTagKey, result))
-	if ctxError != nil {
-		return ctx
-	}
+	ms := float64(time.Since(timerStart).Nanoseconds()) / 1e6
 
-	return updatedCtx
+	values := []string {GetServiceName(), MethodNameFromFullPath(t.getCallingMethod(aop.MethodName)), MethodNameFromFullPath(aop.MethodName), result}
+
+	// Log the metric
+	t.quantiles.WithLabelValues(values...).Observe(ms)
+
+	return ctx
 }
 
-func addPrometheusTags(ctx context.Context, source, callingMethod, method string) context.Context {
-	taggedCtx, err := tag.AddTagsToContext(ctx, tag.Tag{
-		Key:   ServiceNameTag,
-		Value: source},
-		tag.Tag{
-			Key:   CallingMethodTag,
-			Value: callingMethod,
-		}, tag.Tag{
-			Key:   MethodTag,
-			Value: method,
-		})
-
-	if err != nil {
-		return ctx
+func (t *timedFuncAdvice) getStartTime(ctx context.Context) (time.Time, bool) {
+	ctx, ctxVal := PopFromContext(ctx, myTimerMetricCtxKey)
+	if ctxVal != nil {
+		if timeStart, ok := ctxVal.(time.Time); ok {
+			return timeStart, true
+		}
 	}
-	return taggedCtx
+	return time.Time{}, false
 }
+
+func (t *timedFuncAdvice) getCallingMethod(toMethod string) string {
+	for i := 2;; i++ {
+		pc, _, _, ok := runtime.Caller(i)
+		details := runtime.FuncForPC(pc)
+		if ok && details != nil {
+			if details.Name() == toMethod {
+				pc, _, _, ok := runtime.Caller(i+1)
+				details := runtime.FuncForPC(pc)
+				if ok && details != nil {
+					return details.Name()
+				} else {
+					break
+				}
+			}
+		} else {
+			break
+		}
+	}
+
+	return UnknownMethod
+}
+
