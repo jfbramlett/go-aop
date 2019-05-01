@@ -200,7 +200,7 @@ type metricsTestSampleStruct struct {
 
 func (s *metricsTestSampleStruct) TimedMethod1(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return "success", nil
@@ -208,7 +208,7 @@ func (s *metricsTestSampleStruct) TimedMethod1(ctx context.Context) (string, err
 
 func (s *metricsTestSampleStruct) TimedMethod2(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	err = errors.New("failed")
@@ -218,7 +218,7 @@ func (s *metricsTestSampleStruct) TimedMethod2(ctx context.Context) (string, err
 
 func (s *metricsTestSampleStruct) TimedMethod3(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return s.TimedMethod4(ctx)
@@ -226,7 +226,7 @@ func (s *metricsTestSampleStruct) TimedMethod3(ctx context.Context) (string, err
 
 func (s *metricsTestSampleStruct) TimedMethod4(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return "success", nil
@@ -234,7 +234,7 @@ func (s *metricsTestSampleStruct) TimedMethod4(ctx context.Context) (string, err
 
 func (s *metricsTestSampleStruct) SpanMethod1(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return "success", nil
@@ -242,7 +242,7 @@ func (s *metricsTestSampleStruct) SpanMethod1(ctx context.Context) (string, erro
 
 func (s *metricsTestSampleStruct) SpanMethod2(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	err = errors.New("failed")
@@ -252,7 +252,7 @@ func (s *metricsTestSampleStruct) SpanMethod2(ctx context.Context) (string, erro
 
 func (s *metricsTestSampleStruct) SpanMethod3(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return s.SpanMethod4(ctx)
@@ -260,7 +260,7 @@ func (s *metricsTestSampleStruct) SpanMethod3(ctx context.Context) (string, erro
 
 func (s *metricsTestSampleStruct) SpanMethod4(ctx context.Context) (string, error) {
 	var err error
-	ctx = Before(ctx, GetMethodName())
+	ctx = Before(ctx)
 	defer func() {After(ctx, err)}()
 
 	return "success", nil

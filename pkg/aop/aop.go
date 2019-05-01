@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	UnknownService = "Unknown"
-	UnknownMethod = "Unknown"
-	CallingMethodDepth = 3
-	MethodDepth = 2
+	UnknownService 		= "Unknown"
+	UnknownMethod 		= "Unknown"
+	CallsBackToMethod 	= 2
 )
 
 type aopCtxKey struct{}
@@ -145,9 +144,9 @@ func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 }
 
 // Before is the function invoked at the start of a method to execute any registered joinPoints
-func Before(ctx context.Context, method string) context.Context {
+func Before(ctx context.Context) context.Context {
 	if globalAspectMgr != nil {
-		return globalAspectMgr.Before(ctx, method)
+		return globalAspectMgr.Before(ctx, getMethodNameAtOffset(CallsBackToMethod))
 	} else {
 		return ctx
 	}
@@ -162,7 +161,11 @@ func After(ctx context.Context, err error) context.Context {
 }
 
 func GetMethodName() string {
-	pc, _, _, ok := runtime.Caller(1)
+	return getMethodNameAtOffset(CallsBackToMethod)
+}
+
+func getMethodNameAtOffset(offset int) string {
+	pc, _, _, ok := runtime.Caller(offset)
 	details := runtime.FuncForPC(pc)
 	if ok && details != nil {
 		return details.Name()

@@ -233,7 +233,7 @@ type sampleStruct struct {
 
 func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background(), GetMethodName())
+	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
 	s.collector.Collect(MethodFrame, "Method1", MethodAdvice)
@@ -243,7 +243,7 @@ func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 
 func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background(), GetMethodName())
+	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
 	s.collector.Collect(MethodFrame, "Method2", MethodAdvice)
@@ -253,7 +253,7 @@ func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 
 func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background(), GetMethodName())
+	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
 	s.privateMethod1(arg1, arg2)
@@ -263,7 +263,7 @@ func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 
 func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background(), GetMethodName())
+	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
 	s.collector.Collect(MethodFrame, "Special", MethodAdvice)
@@ -273,7 +273,7 @@ func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
 
 func (s *sampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
 	var err error
-	ctx := Before(context.Background(), GetMethodName())
+	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
 	s.collector.Collect(MethodFrame, "privateMethod1", MethodAdvice)
