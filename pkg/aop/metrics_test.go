@@ -89,7 +89,8 @@ func TestSpanFuncAdvice(t *testing.T) {
 		mockTracer := &mocktracer.MockTracer{}
 		opentracing.SetGlobalTracer(mockTracer)
 
-		expectedOperationName := "SpanMethod1"
+		expectedOperationName := "metricsTestSampleStruct.SpanMethod1"
+		expectedMethodName := "SpanMethod1"
 
 		serviceName := "spanFuncSuccess"
 		InitAOP(serviceName)
@@ -110,7 +111,7 @@ func TestSpanFuncAdvice(t *testing.T) {
 		assert.Equal(t, 1, len(finishedSpans))
 		validateSpan(t, finishedSpans[0], expectedOperationName, map[string]string {"component": component,
 			serviceNameKey: serviceName,
-			methodNameKey: expectedOperationName,
+			methodNameKey: expectedMethodName,
 			resultKey: resultSuccess,
 		}, startTime, finishTime)
 	})
@@ -120,7 +121,8 @@ func TestSpanFuncAdvice(t *testing.T) {
 		mockTracer := &mocktracer.MockTracer{}
 		opentracing.SetGlobalTracer(mockTracer)
 
-		expectedOperationName := "SpanMethod2"
+		expectedOperationName := "metricsTestSampleStruct.SpanMethod2"
+		expectedMethodName := "SpanMethod2"
 
 		serviceName := "spanFuncError"
 		InitAOP(serviceName)
@@ -141,7 +143,7 @@ func TestSpanFuncAdvice(t *testing.T) {
 		assert.Equal(t, 1, len(finishedSpans))
 		validateSpan(t, finishedSpans[0], expectedOperationName, map[string]string {"component": component,
 			serviceNameKey: serviceName,
-			methodNameKey: expectedOperationName,
+			methodNameKey: expectedMethodName,
 			resultKey: resultFailure,
 		}, startTime, finishTime)
 	})
@@ -151,8 +153,10 @@ func TestSpanFuncAdvice(t *testing.T) {
 		mockTracer := &mocktracer.MockTracer{}
 		opentracing.SetGlobalTracer(mockTracer)
 
-		expectedOperationName0 := "SpanMethod4"
-		expectedOperationName1 := "SpanMethod3"
+		expectedOperationName0 := "metricsTestSampleStruct.SpanMethod4"
+		expectedMethodName0 := "SpanMethod4"
+		expectedOperationName1 := "metricsTestSampleStruct.SpanMethod3"
+		expectedMethodName1 := "SpanMethod3"
 
 		serviceName := "spanFuncError"
 		InitAOP(serviceName)
@@ -173,12 +177,12 @@ func TestSpanFuncAdvice(t *testing.T) {
 		assert.Equal(t, 2, len(finishedSpans))
 		validateSpan(t, finishedSpans[0], expectedOperationName0, map[string]string {"component": component,
 			serviceNameKey: serviceName,
-			methodNameKey: expectedOperationName0,
+			methodNameKey: expectedMethodName0,
 			resultKey: resultSuccess,
 		}, finishedSpans[1].StartTime, finishedSpans[1].FinishTime)
 		validateSpan(t, finishedSpans[1], expectedOperationName1, map[string]string {"component": component,
 			serviceNameKey: serviceName,
-			methodNameKey: expectedOperationName1,
+			methodNameKey: expectedMethodName1,
 			resultKey: resultSuccess,
 		}, startTime, finishTime)
 

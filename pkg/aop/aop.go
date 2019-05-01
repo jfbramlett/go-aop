@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	UnknownService 		= "Unknown"
-	UnknownMethod 		= "Unknown"
-	CallsBackToMethod 	= 2
+	UnknownService    = "Unknown"
+	UnknownMethod     = "Unknown"
+	CallsBackToMethod = 2
 )
 
 type aopCtxKey struct{}
@@ -160,8 +160,25 @@ func After(ctx context.Context, err error) context.Context {
 	}
 }
 
+// GetMethodName returns the method that has invoked the code that has invokved this method
 func GetMethodName() string {
 	return getMethodNameAtOffset(CallsBackToMethod)
+}
+
+// StructNameFromMethod gets the struct name from a fully qualified method name (or returns a blank if there is no struct
+func StructNameFromMethod(methodName string) string {
+	idx := strings.LastIndex(methodName, "(")
+	if idx > 0 {
+		structName := methodName[idx+1:]
+		idx = strings.LastIndex(structName, ")")
+		if idx > 0 {
+			structName = structName[:idx]
+			structName = strings.TrimPrefix(structName, "*")
+			return structName
+		}
+	}
+
+	return ""
 }
 
 func getMethodNameAtOffset(offset int) string {
@@ -173,6 +190,7 @@ func getMethodNameAtOffset(offset int) string {
 
 	return UnknownMethod
 }
+
 
 func MethodNameFromFullPath(fullMethod string) string {
 	idx := strings.LastIndex(fullMethod, ".")

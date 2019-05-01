@@ -40,7 +40,14 @@ func (s *spanAdvice) Before(ctx context.Context) context.Context {
 	}
 
 	// establish our span
-	span, ctx := opentracing.StartSpanFromContext(ctx, MethodNameFromFullPath(aop.MethodName))
+	structName := StructNameFromMethod(aop.MethodName)
+	methodName := MethodNameFromFullPath(aop.MethodName)
+
+	if structName != "" {
+		methodName = fmt.Sprintf("%s.%s", structName, methodName)
+	}
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, methodName)
 	ext.Component.Set(span, component)
 
 	return ctx

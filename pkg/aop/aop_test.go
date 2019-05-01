@@ -148,6 +148,44 @@ func TestMethodNameFromFullPath(t *testing.T) {
 
 }
 
+func TestStructNameFromMethodt(t *testing.T) {
+	t.Run("test_struct_name", func(t *testing.T) {
+		// given
+		methodName := "github.com/jfbramlett/go-aop/pkg/aop.(sampleStruct).Method1"
+		expectedStructName := "sampleStruct"
+
+		// when
+		structName := StructNameFromMethod(methodName)
+
+		// then
+		assert.Equal(t, expectedStructName, structName)
+	})
+
+	t.Run("test_ptr_struct_name", func(t *testing.T) {
+		// given
+		methodName := "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1"
+		expectedStructName := "sampleStruct"
+
+		// when
+		structName := StructNameFromMethod(methodName)
+
+		// then
+		assert.Equal(t, expectedStructName, structName)
+	})
+
+	t.Run("test_no_struct_name", func(t *testing.T) {
+		// given
+		methodName := "github.com/jfbramlett/go-aop/pkg/aop.Method1"
+		expectedStructName := ""
+
+		// when
+		structName := StructNameFromMethod(methodName)
+
+		// then
+		assert.Equal(t, expectedStructName, structName)
+	})
+}
+
 func TestPushToContext(t *testing.T) {
 	t.Run("add_to_empty", func(t *testing.T) {
 		// given
