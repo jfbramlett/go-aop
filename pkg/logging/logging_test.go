@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLogMessage(t *testing.T) {
@@ -18,10 +19,13 @@ func TestLogMessage(t *testing.T) {
 		level := "DEBUG"
 		name := "logname"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.logMsg(level, msg, nil)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -31,6 +35,7 @@ func TestLogMessage(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], level)
 		assert.Equal(t, logOutput["msg"], msg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -41,11 +46,13 @@ func TestLogMessage(t *testing.T) {
 		level := "DEBUG"
 		name := "logname"
 		err := errors.New("some error")
-
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
-		logger.logMsg(level, msg, err)
+		logger.logMsg(level,  msg, err)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -56,6 +63,7 @@ func TestLogMessage(t *testing.T) {
 		assert.Equal(t, logOutput["level"], level)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["error"], err.Error())
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -69,11 +77,14 @@ func TestLogMessage(t *testing.T) {
 		mdcValue := "12345"
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
+		InitLogging(writer)
+		defer StopLogging()
 
-		logger := logger{ctx: ctx, name: name, writer: writer}
+		logger := logger{ctx: ctx, method: name}
 
 		// when
 		logger.logMsg(level, msg, nil)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -84,6 +95,7 @@ func TestLogMessage(t *testing.T) {
 		assert.Equal(t, level, logOutput["level"])
 		assert.Equal(t, msg, logOutput["msg"])
 		assert.NotNil(t, logOutput["timestamp"])
+		assert.Equal(t, logOutput["method"], name)
 		assert.Equal(t, mdcValue, logOutput[mdcKey])
 	})
 }
@@ -93,12 +105,15 @@ func TestLogDebug(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Debug(msg)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -108,6 +123,7 @@ func TestLogDebug(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], DEBUG)
 		assert.Equal(t, logOutput["msg"], msg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -117,12 +133,15 @@ func TestLogDebug(t *testing.T) {
 		msg := "some message %s"
 		msgAddition := "some text"
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func2"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Debugf(msg, msgAddition)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -132,6 +151,7 @@ func TestLogDebug(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], DEBUG)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 }
@@ -141,12 +161,15 @@ func TestLogInfo(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func1"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Info(msg)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -156,6 +179,7 @@ func TestLogInfo(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], INFO)
 		assert.Equal(t, logOutput["msg"], msg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -165,12 +189,15 @@ func TestLogInfo(t *testing.T) {
 		msg := "some message %s"
 		msgAddition := "some text"
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func2"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Infof(msg, msgAddition)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -180,6 +207,7 @@ func TestLogInfo(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], INFO)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 }
@@ -189,12 +217,15 @@ func TestLogWarn(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func1"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Warn(msg)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -204,6 +235,7 @@ func TestLogWarn(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], WARN)
 		assert.Equal(t, logOutput["msg"], msg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -213,12 +245,15 @@ func TestLogWarn(t *testing.T) {
 		msg := "some message %s"
 		msgAddition := "some text"
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func2"
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Warnf(msg, msgAddition)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -228,6 +263,7 @@ func TestLogWarn(t *testing.T) {
 		json.Unmarshal([]byte(outMsg), &logOutput)
 		assert.Equal(t, logOutput["level"], WARN)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 }
@@ -237,13 +273,16 @@ func TestLogError(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func1"
 		err := errors.New("my error")
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Error(err, msg)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -254,6 +293,7 @@ func TestLogError(t *testing.T) {
 		assert.Equal(t, logOutput["level"], ERROR)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["error"], err.Error())
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 
@@ -263,13 +303,16 @@ func TestLogError(t *testing.T) {
 		msg := "some message %s"
 		msgAddition := "some text"
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func2"
 		err := errors.New("my error")
 
-		logger := logger{ctx: context.Background(), name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: context.Background(), method: name}
 
 		// when
 		logger.Errorf(err, msg, msgAddition)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -280,6 +323,7 @@ func TestLogError(t *testing.T) {
 		assert.Equal(t, logOutput["level"], ERROR)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
 		assert.Equal(t, logOutput["error"], err.Error())
+		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
 	})
 }
@@ -290,7 +334,7 @@ func TestAddMDC(t *testing.T) {
 		writer := &strings.Builder{}
 		msg := "some message"
 		level := "info"
-		name := "logname"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestAddMDC.func1"
 		mdcKey := "requestid"
 		mdcValue := "12345"
 		mdcKey2 := "requestid"
@@ -298,11 +342,14 @@ func TestAddMDC(t *testing.T) {
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
 
-		logger := logger{ctx: ctx, name: name, writer: writer}
+		InitLogging(writer)
+		defer StopLogging()
+		logger := logger{ctx: ctx, method: name}
 
 		// when
 		AddMDC(context.Background(), map[string]interface{} {mdcKey2: mdcValue2})
 		logger.Info(msg)
+		time.Sleep(1 * time.Second)
 
 		// then
 		outMsg := writer.String()
@@ -313,6 +360,7 @@ func TestAddMDC(t *testing.T) {
 		assert.Equal(t, level, logOutput["level"])
 		assert.Equal(t, msg, logOutput["msg"])
 		assert.NotNil(t, logOutput["timestamp"])
+		assert.Equal(t, logOutput["method"], name)
 		assert.Equal(t, mdcValue, logOutput[mdcKey])
 		assert.Equal(t, mdcValue2, logOutput[mdcKey2])
 	})

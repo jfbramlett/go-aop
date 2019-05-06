@@ -3,6 +3,7 @@ package aop
 import (
 	"context"
 	"fmt"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/prometheus/client_golang/prometheus"
@@ -113,7 +114,7 @@ func (t *timedFuncAdvice) Before(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	wrappedContext := PushToContext(ctx, myTimerMetricCtxKey, time.Now())
+	wrappedContext := common.PushToContext(ctx, myTimerMetricCtxKey, time.Now())
 
 	return wrappedContext
 }
@@ -145,7 +146,7 @@ func (t *timedFuncAdvice) After(ctx context.Context, err error) context.Context 
 }
 
 func (t *timedFuncAdvice) getStartTime(ctx context.Context) (time.Time, bool) {
-	ctx, ctxVal := PopFromContext(ctx, myTimerMetricCtxKey)
+	ctx, ctxVal := common.PopFromContext(ctx, myTimerMetricCtxKey)
 	if ctxVal != nil {
 		if timeStart, ok := ctxVal.(time.Time); ok {
 			return timeStart, true

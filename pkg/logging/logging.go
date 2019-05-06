@@ -4,15 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
+	"runtime"
 	"time"
 )
-
-type logKey struct {
-}
-
-var logCtxKey = logKey{}
 
 type mdcKey struct {
 }
@@ -26,6 +20,7 @@ const (
 	ERROR = "error"
 
 	TIMESTAMP = "timestamp"
+	METHOD = "method"
 	LEVEL = "level"
 	MESSAGE = "msg"
 )
@@ -67,20 +62,14 @@ type Logger interface {
 	Errorf(err error, fmt string, args ...interface{})
 }
 
-func LogFromContext(ctx context.Context, forName string) (Logger, context.Context) {
-	ctxLog := ctx.Value(logCtxKey)
-	if ctxLog == nil {
-		log := &logger{name: forName, ctx: ctx, writer: os.Stdout}
-		return log, context.WithValue(ctx, logCtxKey, log)
-	}
-
-	return ctxLog.(Logger), ctx
+func GetLogger(ctx context.Context) Logger {
+	methodName := getCallingMethodName()
+	return &logger{ctx: ctx, method: methodName}
 }
 
 type logger struct {
-	name	string
 	ctx		context.Context
-	writer	io.StringWriter
+	method 	string
 }
 
 func (l *logger) Info(msg string) {
@@ -115,25 +104,39 @@ func (l *logger) Errorf(err error, format string, args ...interface{}) {
 	l.logMsg(ERROR, fmt.Sprintf(format, args...), err)
 }
 
-func (l *logger) logMsg(level, msg string, err error) {
-	msgJson := make(map[string]interface{})
-	msgJson[TIMESTAMP] = time.Now().Format("2006-01-02 15:04:05")
-	msgJson[LEVEL] = level
-	msgJson[MESSAGE] = msg
-	if err != nil {
-		msgJson[ERROR] = err.Error()
-	}
+func (l *logger) logMsg(level string, msg string, err error) {
+	if IsEnabled(level, l.method) {
+		msgJson := make(map[string]interface{})
+		msgJson[TIMESTAMP] = time.Now().Format("2006-01-02 15:04:05")
+		msgJson[METHOD] = l.method
+		msgJson[LEVEL] = level
+		msgJson[MESSAGE] = msg
+		if err != nil {
+			msgJson[ERROR] = err.Error()
+		}
 
-	mdc := getMDC(l.ctx)
-	for k, v := range mdc {
-		msgJson[k] = v
-	}
+		mdc := getMDC(l.ctx)
+		for k, v := range mdc {
+			msgJson[k] = v
+		}
 
-	jsn, err := json.Marshal(msgJson)
-	if err == nil {
-		l.writer.WriteString(string(jsn))
-		return
-	}
+		jsn, err := json.Marshal(msgJson)
+		if err == nil {
+			WriteString(string(jsn))
+			return
+		}
 
-	l.writer.WriteString(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
+		WriteString(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
+	}
 }
+
+func getCallingMethodName() string {
+	pc, _, _, ok := runtime.Caller(2)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		return details.Name()
+	}
+
+	return "unknown"
+}
+
