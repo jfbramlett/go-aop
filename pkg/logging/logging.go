@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jfbramlett/go-aop/pkg/common"
 	"io"
 	"os"
 	"time"
@@ -58,7 +57,6 @@ func getMDC(ctx context.Context) map[string]interface{} {
 
 
 type Logger interface {
-	For() string
 	Info(msg string)
 	Infof(fmt string, args ...interface{})
 	Debug(msg string)
@@ -70,22 +68,19 @@ type Logger interface {
 }
 
 func LogFromContext(ctx context.Context, forName string) (Logger, context.Context) {
-	log := &logger{name: forName, ctx: ctx, writer: os.Stdout}
-	return log, common.PushToContext(ctx, logCtxKey, log)
-}
+	ctxLog := ctx.Value(logCtxKey)
+	if ctxLog == nil {
+		log := &logger{name: forName, ctx: ctx, writer: os.Stdout}
+		return log, context.WithValue(ctx, logCtxKey, log)
+	}
 
-func ResetContext(ctx context.Context) {
-	common.PopFromContext(ctx, logCtxKey)
+	return ctxLog.(Logger), ctx
 }
 
 type logger struct {
 	name	string
 	ctx		context.Context
 	writer	io.StringWriter
-}
-
-func (l *logger) For() string {
-	return l.name
 }
 
 func (l *logger) Info(msg string) {
@@ -113,11 +108,11 @@ func (l *logger) Warnf(format string, args ...interface{}) {
 }
 
 func (l *logger) Error(err error, msg string) {
-	l.logMsg(ERROR, msg, nil)
+	l.logMsg(ERROR, msg, err)
 }
 
 func (l *logger) Errorf(err error, format string, args ...interface{}) {
-	l.logMsg(ERROR, fmt.Sprintf(format, args...), nil)
+	l.logMsg(ERROR, fmt.Sprintf(format, args...), err)
 }
 
 func (l *logger) logMsg(level, msg string, err error) {
