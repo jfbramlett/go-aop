@@ -2,10 +2,8 @@ package aop
 
 import (
 	"context"
-	"github.com/golang-collections/collections/stack"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -185,85 +183,6 @@ func TestStructNameFromMethodt(t *testing.T) {
 		assert.Equal(t, expectedStructName, structName)
 	})
 }
-
-func TestPushToContext(t *testing.T) {
-	t.Run("add_to_empty", func(t *testing.T) {
-		// given
-		key := "ctxKey"
-		val := "some value"
-
-		// when
-		ctx := PushToContext(context.Background(), key, val)
-
-		// then
-		ctxVal := ctx.Value(key)
-		require.NotNil(t, ctxVal)
-
-		stackVal, valid := ctxVal.(*stack.Stack)
-		require.True(t, valid)
-		assert.Equal(t, 1, stackVal.Len())
-		assert.Equal(t, val, stackVal.Pop())
-	})
-
-	t.Run("value_already_there", func(t *testing.T) {
-		// given
-		stackVal := stack.New()
-		key := "ctxKey"
-		val1 := "some value"
-		val2 := "some other value"
-		stackVal.Push(val1)
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, key, stackVal)
-
-		// when
-		ctx = PushToContext(ctx, key, val2)
-
-		// then
-		ctxVal := ctx.Value(key)
-		require.NotNil(t, ctxVal)
-
-		stackVal, valid := ctxVal.(*stack.Stack)
-		require.True(t, valid)
-		assert.Equal(t, 2, stackVal.Len())
-		assert.Equal(t, val2, stackVal.Pop())
-		assert.Equal(t, val1, stackVal.Pop())
-	})
-}
-
-func TestPopFromContext(t *testing.T) {
-	t.Run("pop_empty", func(t *testing.T) {
-		// given
-		key := "ctxKey"
-
-		// when
-		ctx, val := PopFromContext(context.Background(), key)
-
-		// then
-		assert.NotNil(t, ctx)
-		assert.Nil(t, val)
-	})
-
-	t.Run("pop_value", func(t *testing.T) {
-		// given
-		stackVal := stack.New()
-		key := "ctxKey"
-		val1 := "some value"
-		val2 := "some other value"
-		stackVal.Push(val1)
-		stackVal.Push(val2)
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, key, stackVal)
-
-		// when
-		ctx, val := PopFromContext(ctx, key)
-
-		// then
-		assert.NotNil(t, ctx)
-		assert.Equal(t, val2, val)
-	})
-
-}
-
 
 type sampleStruct struct {
 	collector		*aspectCollector

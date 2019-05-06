@@ -2,7 +2,7 @@ package aop
 
 import (
 	"context"
-	"github.com/golang-collections/collections/stack"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"regexp"
 	"runtime"
 	"strings"
@@ -113,11 +113,11 @@ func (a *aspectMgr) After(ctx context.Context, err error) context.Context {
 }
 
 func (a *aspectMgr) contextWithAspect(ctx context.Context, aop *Aspect) context.Context {
-	return PushToContext(ctx, myAopCtxKey, aop)
+	return common.PushToContext(ctx, myAopCtxKey, aop)
 }
 
 func (a *aspectMgr) removeAspectFromContext(ctx context.Context) context.Context {
-	ctx, _ = PopFromContext(ctx, myAopCtxKey)
+	ctx, _ = common.PopFromContext(ctx, myAopCtxKey)
 	return ctx
 }
 
@@ -201,49 +201,12 @@ func MethodNameFromFullPath(fullMethod string) string {
 }
 
 func AspectFromContext(ctx context.Context) *Aspect {
-	ctxStack := ctx.Value(myAopCtxKey)
-	if ctxStack != nil {
-		if aopStack, ok := ctxStack.(*stack.Stack); ok {
-			stackItem := aopStack.Peek()
-			if stackItem != nil {
-				if aopItem, ok := stackItem.(*Aspect); ok {
-					return aopItem
-				}
-			}
+	stackItem := common.FromContext(ctx, myAopCtxKey)
+	if stackItem != nil {
+		if aopItem, ok := stackItem.(*Aspect); ok {
+			return aopItem
 		}
 	}
 
 	return nil
-}
-
-func PushToContext(ctx context.Context, ctxKey interface{}, value interface{}) context.Context {
-	var dataStack *stack.Stack
-	var ok bool
-
-	ctxStack := ctx.Value(ctxKey)
-	if ctxStack == nil {
-		dataStack = stack.New()
-		ctx = context.WithValue(ctx, ctxKey, dataStack)
-	} else {
-		if dataStack, ok = ctxStack.(*stack.Stack); !ok {
-			return ctx
-		}
-	}
-
-	dataStack.Push(value)
-
-	return ctx
-}
-
-func PopFromContext(ctx context.Context, ctxKey interface{}) (context.Context, interface{}) {
-	var item interface{}
-
-	ctxStack := ctx.Value(ctxKey)
-	if ctxStack != nil {
-		if dataStack, ok := ctxStack.(*stack.Stack); ok {
-			item = dataStack.Pop()
-		}
-	}
-
-	return ctx, item
 }
