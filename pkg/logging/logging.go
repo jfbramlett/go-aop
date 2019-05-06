@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jfbramlett/go-aop/pkg/common"
+	"io"
+	"os"
 	"time"
 )
 
@@ -68,7 +70,7 @@ type Logger interface {
 }
 
 func LogFromContext(ctx context.Context, forName string) (Logger, context.Context) {
-	log := &logger{name: forName}
+	log := &logger{name: forName, ctx: ctx, writer: os.Stdout}
 	return log, common.PushToContext(ctx, logCtxKey, log)
 }
 
@@ -79,7 +81,7 @@ func ResetContext(ctx context.Context) {
 type logger struct {
 	name	string
 	ctx		context.Context
-	mdc		map[string]interface{}
+	writer	io.StringWriter
 }
 
 func (l *logger) For() string {
@@ -134,8 +136,9 @@ func (l *logger) logMsg(level, msg string, err error) {
 
 	jsn, err := json.Marshal(msgJson)
 	if err == nil {
-		fmt.Println(jsn)
+		l.writer.WriteString(string(jsn))
+		return
 	}
 
-	fmt.Println(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
+	l.writer.WriteString(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
 }
