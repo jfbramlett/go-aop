@@ -64,7 +64,7 @@ type Logger interface {
 
 func GetLogger(ctx context.Context) Logger {
 	methodName := getCallingMethodName()
-	return &logger{ctx: ctx, method: methodName, writer: GetLogWriter()}
+	return &logger{ctx: ctx, method: methodName, writer: getLogWriter()}
 }
 
 type logger struct {

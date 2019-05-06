@@ -82,7 +82,7 @@ func (l *simpleLogWriter) IsEnabled(level, method string) bool {
 
 var globalWriter LogWriter
 
-func GetLogWriter() LogWriter {
+func getLogWriter() LogWriter {
 	return globalWriter
 }
 
@@ -106,6 +106,12 @@ func InitStdoutLogWriter() LogWriter {
 
 func InitSimpleLogWriter(writer io.StringWriter) LogWriter {
 	globalWriter = &simpleLogWriter{writer: writer}
+	globalWriter.Init()
+	return globalWriter
+}
+
+func InitLogWriter(writer LogWriter) LogWriter {
+	globalWriter = writer
 	globalWriter.Init()
 	return globalWriter
 }

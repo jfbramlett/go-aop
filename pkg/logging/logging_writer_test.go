@@ -23,7 +23,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(idx int) {
-			logger := logger{ctx: context.Background(), method: name, writer: GetLogWriter()}
+			logger := logger{ctx: context.Background(), method: name, writer: getLogWriter()}
 			logger.Debug(fmt.Sprintf("hello %d", idx))
 			time.Sleep(1 * time.Second)
 			wg.Done()
@@ -31,7 +31,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	}
 
 	wg.Wait()
-	GetLogWriter().Flush()
+	getLogWriter().Flush()
 	time.Sleep(1 * time.Second)
 
 	// then
