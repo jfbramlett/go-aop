@@ -19,9 +19,7 @@ func TestLogMessage(t *testing.T) {
 		level := "DEBUG"
 		name := "logname"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.logMsg(level, msg, nil)
@@ -46,9 +44,7 @@ func TestLogMessage(t *testing.T) {
 		level := "DEBUG"
 		name := "logname"
 		err := errors.New("some error")
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.logMsg(level,  msg, err)
@@ -77,10 +73,7 @@ func TestLogMessage(t *testing.T) {
 		mdcValue := "12345"
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
-		InitLogging(writer)
-		defer StopLogging()
-
-		logger := logger{ctx: ctx, method: name}
+		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.logMsg(level, msg, nil)
@@ -107,9 +100,7 @@ func TestLogDebug(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Debug(msg)
@@ -135,9 +126,7 @@ func TestLogDebug(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func2"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Debugf(msg, msgAddition)
@@ -163,9 +152,7 @@ func TestLogInfo(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func1"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Info(msg)
@@ -191,9 +178,7 @@ func TestLogInfo(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func2"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Infof(msg, msgAddition)
@@ -219,9 +204,7 @@ func TestLogWarn(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func1"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Warn(msg)
@@ -247,9 +230,7 @@ func TestLogWarn(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func2"
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Warnf(msg, msgAddition)
@@ -276,9 +257,7 @@ func TestLogError(t *testing.T) {
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func1"
 		err := errors.New("my error")
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Error(err, msg)
@@ -306,9 +285,7 @@ func TestLogError(t *testing.T) {
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func2"
 		err := errors.New("my error")
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: context.Background(), method: name}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		logger.Errorf(err, msg, msgAddition)
@@ -342,9 +319,7 @@ func TestAddMDC(t *testing.T) {
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
 
-		InitLogging(writer)
-		defer StopLogging()
-		logger := logger{ctx: ctx, method: name}
+		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}}
 
 		// when
 		AddMDC(context.Background(), map[string]interface{} {mdcKey2: mdcValue2})

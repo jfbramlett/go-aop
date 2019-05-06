@@ -15,16 +15,15 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	// given
 	writer := &strings.Builder{}
 	name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebugMultipleGoRoutines.func1"
-	Flush()
-	InitLogging(writer)
-	defer StopLogging()
+	channelWriter := InitChannelLogWriter(writer)
+	defer channelWriter.Close()
 
 	// when
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(idx int) {
-			logger := logger{ctx: context.Background(), method: name}
+			logger := logger{ctx: context.Background(), method: name, writer: GetLogWriter()}
 			logger.Debug(fmt.Sprintf("hello %d", idx))
 			time.Sleep(1 * time.Second)
 			wg.Done()
@@ -32,7 +31,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	}
 
 	wg.Wait()
-	Flush()
+	GetLogWriter().Flush()
 	time.Sleep(1 * time.Second)
 
 	// then

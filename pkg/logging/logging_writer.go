@@ -2,16 +2,25 @@ package logging
 
 import (
 	"io"
+	"os"
 	"sync"
 )
 
-type logWriter struct {
+type LogWriter interface {
+	Init()
+	WriteString(msg string) (int, error)
+	Close()
+	Flush()
+	IsEnabled(level, method string) bool
+}
+
+type channelLogWriter struct {
 	outputChannel		chan string
 	waitGroup			sync.WaitGroup
 	writer				io.StringWriter
 }
 
-func (l *logWriter) WriteString(msg string) (int, error) {
+func (l *channelLogWriter) WriteString(msg string) (int, error) {
 	if len(msg) > 0 {
 		l.waitGroup.Add(1)
 		l.outputChannel <- msg
@@ -19,49 +28,84 @@ func (l *logWriter) WriteString(msg string) (int, error) {
 	return len(msg), nil
 }
 
-func (l *logWriter) Run() {
-	for  {
-		msg := <- l.outputChannel
-		if len(msg) > 0 {
-			l.writer.WriteString(msg + "\n")
-			l.waitGroup.Done()
+func (l *channelLogWriter) Init() {
+	go func() {
+		for  {
+			msg := <- l.outputChannel
+			if len(msg) > 0 {
+				l.writer.WriteString(msg + "\n")
+				l.waitGroup.Done()
+			}
 		}
-	}
+	}()
 }
 
-func (l *logWriter) Close() {
+func (l *channelLogWriter) Close() {
+	l.Flush()
 	close(l.outputChannel)
 }
 
-func (l *logWriter) Flush() {
+func (l *channelLogWriter) Flush() {
 	l.waitGroup.Wait()
 }
 
-func (l *logWriter) IsEnabled(level, method string) bool {
+func (l *channelLogWriter) IsEnabled(level, method string) bool {
 	return true
 }
 
 
-var globalWriter logWriter
+type simpleLogWriter struct {
+	writer		io.StringWriter
+}
 
-func InitLogging(writer io.StringWriter) {
-	globalWriter = logWriter{outputChannel: make(chan string), writer: writer}
-	go globalWriter.Run()
+func (l *simpleLogWriter) WriteString(msg string) (int, error) {
+	if len(msg) > 0 {
+		l.writer.WriteString(msg)
+	}
+	return len(msg), nil
+}
+
+func (l *simpleLogWriter) Init() {
+}
+
+func (l *simpleLogWriter) Close() {
+	l.Flush()
+}
+
+func (l *simpleLogWriter) Flush() {
+}
+
+func (l *simpleLogWriter) IsEnabled(level, method string) bool {
+	return true
 }
 
 
-func Flush() {
-	globalWriter.Flush()
+var globalWriter LogWriter
+
+func GetLogWriter() LogWriter {
+	return globalWriter
 }
 
-func StopLogging() {
-	globalWriter.Close()
+func InitStdoutChannelLogWriter() LogWriter {
+	globalWriter = &channelLogWriter{outputChannel: make(chan string), waitGroup: sync.WaitGroup{}, writer: os.Stdout}
+	globalWriter.Init()
+	return globalWriter
 }
 
-func WriteString(msg string) {
-	globalWriter.WriteString(msg)
+func InitChannelLogWriter(writer io.StringWriter) LogWriter {
+	globalWriter = &channelLogWriter{outputChannel: make(chan string), waitGroup: sync.WaitGroup{}, writer: writer}
+	globalWriter.Init()
+	return globalWriter
 }
 
-func IsEnabled(level, method string) bool {
-	return globalWriter.IsEnabled(level, method)
+func InitStdoutLogWriter() LogWriter {
+	globalWriter = &simpleLogWriter{writer: os.Stdout}
+	globalWriter.Init()
+	return globalWriter
+}
+
+func InitSimpleLogWriter(writer io.StringWriter) LogWriter {
+	globalWriter = &simpleLogWriter{writer: writer}
+	globalWriter.Init()
+	return globalWriter
 }

@@ -64,12 +64,13 @@ type Logger interface {
 
 func GetLogger(ctx context.Context) Logger {
 	methodName := getCallingMethodName()
-	return &logger{ctx: ctx, method: methodName}
+	return &logger{ctx: ctx, method: methodName, writer: GetLogWriter()}
 }
 
 type logger struct {
-	ctx		context.Context
-	method 	string
+	ctx				context.Context
+	method 			string
+	writer			LogWriter
 }
 
 func (l *logger) Info(msg string) {
@@ -105,7 +106,7 @@ func (l *logger) Errorf(err error, format string, args ...interface{}) {
 }
 
 func (l *logger) logMsg(level string, msg string, err error) {
-	if IsEnabled(level, l.method) {
+	if l.writer.IsEnabled(level, l.method) {
 		msgJson := make(map[string]interface{})
 		msgJson[TIMESTAMP] = time.Now().Format("2006-01-02 15:04:05")
 		msgJson[METHOD] = l.method
@@ -122,11 +123,11 @@ func (l *logger) logMsg(level string, msg string, err error) {
 
 		jsn, err := json.Marshal(msgJson)
 		if err == nil {
-			WriteString(string(jsn))
+			l.writer.WriteString(string(jsn))
 			return
 		}
 
-		WriteString(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
+		l.writer.WriteString(fmt.Sprintf("[%s] [%s] %s", msgJson[TIMESTAMP], level, msg))
 	}
 }
 
