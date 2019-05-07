@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
@@ -16,10 +17,10 @@ func TestLogMessage(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		level := "DEBUG"
+		level := "DebugLevel"
 		name := "logname"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.logMsg(level, msg, nil)
@@ -27,7 +28,7 @@ func TestLogMessage(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
@@ -41,10 +42,10 @@ func TestLogMessage(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		level := "DEBUG"
+		level := "DebugLevel"
 		name := "logname"
 		err := errors.New("some error")
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.logMsg(level,  msg, err)
@@ -52,7 +53,7 @@ func TestLogMessage(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
@@ -67,13 +68,13 @@ func TestLogMessage(t *testing.T) {
 		// given
 		writer := &strings.Builder{}
 		msg := "some message"
-		level := "DEBUG"
+		level := "DebugLevel"
 		name := "logname"
 		mdcKey := "requestid"
 		mdcValue := "12345"
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
-		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.logMsg(level, msg, nil)
@@ -81,7 +82,7 @@ func TestLogMessage(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
@@ -100,7 +101,7 @@ func TestLogDebug(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Debug(msg)
@@ -108,14 +109,46 @@ func TestLogDebug(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], DEBUG)
+		assert.Equal(t, logOutput["level"], DebugLevel)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Debug(msg)
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message %s"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Debugf(msg, "something to add")
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
 	})
 
 	t.Run("format", func(t *testing.T) {
@@ -126,7 +159,7 @@ func TestLogDebug(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func2"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Debugf(msg, msgAddition)
@@ -134,11 +167,11 @@ func TestLogDebug(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], DEBUG)
+		assert.Equal(t, logOutput["level"], DebugLevel)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
@@ -152,7 +185,7 @@ func TestLogInfo(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func1"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Info(msg)
@@ -160,11 +193,11 @@ func TestLogInfo(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], INFO)
+		assert.Equal(t, logOutput["level"], InfoLevel)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
@@ -178,7 +211,7 @@ func TestLogInfo(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogInfo.func2"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Infof(msg, msgAddition)
@@ -186,14 +219,46 @@ func TestLogInfo(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], INFO)
+		assert.Equal(t, logOutput["level"], InfoLevel)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Info(msg)
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message %s"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Infof(msg, "something to add")
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
 	})
 }
 
@@ -204,7 +269,7 @@ func TestLogWarn(t *testing.T) {
 		msg := "some message"
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func1"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Warn(msg)
@@ -212,11 +277,11 @@ func TestLogWarn(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], WARN)
+		assert.Equal(t, logOutput["level"], WarnLevel)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
@@ -230,7 +295,7 @@ func TestLogWarn(t *testing.T) {
 		expectedMsg := fmt.Sprintf(msg, msgAddition)
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogWarn.func2"
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Warnf(msg, msgAddition)
@@ -238,14 +303,46 @@ func TestLogWarn(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], WARN)
+		assert.Equal(t, logOutput["level"], WarnLevel)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Warn(msg)
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message %s"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Warnf(msg, "something to add")
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
 	})
 }
 
@@ -257,7 +354,7 @@ func TestLogError(t *testing.T) {
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func1"
 		err := errors.New("my error")
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Error(err, msg)
@@ -265,11 +362,11 @@ func TestLogError(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], ERROR)
+		assert.Equal(t, logOutput["level"], ErrorLevel)
 		assert.Equal(t, logOutput["msg"], msg)
 		assert.Equal(t, logOutput["error"], err.Error())
 		assert.Equal(t, logOutput["method"], name)
@@ -285,7 +382,7 @@ func TestLogError(t *testing.T) {
 		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogError.func2"
 		err := errors.New("my error")
 
-		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		logger.Errorf(err, msg, msgAddition)
@@ -293,15 +390,47 @@ func TestLogError(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)
-		assert.Equal(t, logOutput["level"], ERROR)
+		assert.Equal(t, logOutput["level"], ErrorLevel)
 		assert.Equal(t, logOutput["msg"], expectedMsg)
 		assert.Equal(t, logOutput["error"], err.Error())
 		assert.Equal(t, logOutput["method"], name)
 		assert.NotNil(t, logOutput["timestamp"])
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Error(errors.New("something"), msg)
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
+	})
+
+	t.Run("not-enabled", func(t *testing.T) {
+		// given
+		writer := &strings.Builder{}
+		msg := "some message %s"
+		name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebug.func1"
+
+		logger := logger{ctx: context.Background(), method: name, writer: &simpleLogWriter{writer: writer}, config: LogConfig{EnabledLevels: map[string]bool{}}}
+
+		// when
+		logger.Errorf(errors.New("something"), msg, "something to add")
+
+		// then
+		outMsg := writer.String()
+		assert.Equal(t, 0, len(outMsg))
 	})
 }
 
@@ -319,7 +448,7 @@ func TestAddMDC(t *testing.T) {
 
 		ctx := AddMDC(context.Background(), map[string]interface{} {mdcKey: mdcValue})
 
-		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}}
+		logger := logger{ctx: ctx, method: name, writer: &simpleLogWriter{writer: writer}, config: DefaultLogConfig}
 
 		// when
 		AddMDC(context.Background(), map[string]interface{} {mdcKey2: mdcValue2})
@@ -328,7 +457,7 @@ func TestAddMDC(t *testing.T) {
 
 		// then
 		outMsg := writer.String()
-		assert.NotNil(t, outMsg)
+		require.True(t, len(outMsg) > 0)
 
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(outMsg), &logOutput)

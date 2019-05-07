@@ -2,7 +2,6 @@ package logging
 
 import (
 	"io"
-	"os"
 	"sync"
 )
 
@@ -11,7 +10,6 @@ type LogWriter interface {
 	WriteString(msg string) (int, error)
 	Close()
 	Flush()
-	IsEnabled(level, method string) bool
 }
 
 type channelLogWriter struct {
@@ -75,43 +73,15 @@ func (l *simpleLogWriter) Close() {
 func (l *simpleLogWriter) Flush() {
 }
 
-func (l *simpleLogWriter) IsEnabled(level, method string) bool {
-	return true
+
+func initChannelLogWriter(writer io.StringWriter) LogWriter {
+	channelWriter := &channelLogWriter{outputChannel: make(chan string), waitGroup: sync.WaitGroup{}, writer: writer}
+	channelWriter.Init()
+	return channelWriter
 }
 
-
-var globalWriter LogWriter
-
-func getLogWriter() LogWriter {
-	return globalWriter
-}
-
-func InitStdoutChannelLogWriter() LogWriter {
-	globalWriter = &channelLogWriter{outputChannel: make(chan string), waitGroup: sync.WaitGroup{}, writer: os.Stdout}
-	globalWriter.Init()
-	return globalWriter
-}
-
-func InitChannelLogWriter(writer io.StringWriter) LogWriter {
-	globalWriter = &channelLogWriter{outputChannel: make(chan string), waitGroup: sync.WaitGroup{}, writer: writer}
-	globalWriter.Init()
-	return globalWriter
-}
-
-func InitStdoutLogWriter() LogWriter {
-	globalWriter = &simpleLogWriter{writer: os.Stdout}
-	globalWriter.Init()
-	return globalWriter
-}
-
-func InitSimpleLogWriter(writer io.StringWriter) LogWriter {
-	globalWriter = &simpleLogWriter{writer: writer}
-	globalWriter.Init()
-	return globalWriter
-}
-
-func InitLogWriter(writer LogWriter) LogWriter {
-	globalWriter = writer
-	globalWriter.Init()
-	return globalWriter
+func initSimpleLogWriter(writer io.StringWriter) LogWriter {
+	simpleWriter := &simpleLogWriter{writer: writer}
+	simpleWriter.Init()
+	return simpleWriter
 }

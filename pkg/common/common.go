@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"github.com/golang-collections/collections/stack"
+	"runtime"
 )
 
 func PushToContext(ctx context.Context, ctxKey interface{}, value interface{}) context.Context {
@@ -46,5 +47,18 @@ func FromContext(ctx context.Context, ctxKey interface{}) interface{} {
 	}
 
 	return nil
+}
 
+func GetCallingMethodName() string {
+	return GetMethodNameAt(3)
+}
+
+func GetMethodNameAt(idx int) string {
+	pc, _, _, ok := runtime.Caller(idx)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		return details.Name()
+	}
+
+	return "unknown"
 }

@@ -15,7 +15,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	// given
 	writer := &strings.Builder{}
 	name := "github.com/jfbramlett/go-aop/pkg/logging.TestLogDebugMultipleGoRoutines.func1"
-	channelWriter := InitChannelLogWriter(writer)
+	channelWriter := initChannelLogWriter(writer)
 	defer channelWriter.Close()
 
 	// when
@@ -23,7 +23,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(idx int) {
-			logger := logger{ctx: context.Background(), method: name, writer: getLogWriter()}
+			logger := logger{ctx: context.Background(), method: name, writer: channelWriter, config: DefaultLogConfig}
 			logger.Debug(fmt.Sprintf("hello %d", idx))
 			time.Sleep(1 * time.Second)
 			wg.Done()
@@ -31,7 +31,7 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	}
 
 	wg.Wait()
-	getLogWriter().Flush()
+	channelWriter.Flush()
 	time.Sleep(1 * time.Second)
 
 	// then
@@ -45,9 +45,9 @@ func TestLogDebugMultipleGoRoutines(t *testing.T) {
 	for _, m := range msgs {
 		logOutput := make(map[string]interface{})
 		json.Unmarshal([]byte(m), &logOutput)
-		assert.Equal(t, logOutput["level"], DEBUG)
+		assert.Equal(t, DebugLevel, logOutput["level"])
 		assert.True(t, strings.HasPrefix(logOutput["msg"].(string), "hello "))
-		assert.Equal(t, logOutput["method"], name)
+		assert.Equal(t, name, logOutput["method"])
 		assert.NotNil(t, logOutput["timestamp"])
 	}
 }

@@ -120,3 +120,28 @@ func TestFromContext(t *testing.T) {
 
 }
 
+func TestGetMethodName(t *testing.T) {
+	// given
+	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/common.TestGetMethodName"
+
+	// when
+	methodName := func() string {
+		return GetCallingMethodName()
+	}()
+
+	// then
+	assert.Equal(t, expectedMethodName, methodName)
+}
+
+func TestGetMethodNameAt(t *testing.T) {
+	// given
+	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/common.TestGetMethodNameAt"
+
+	// when
+	methodName := func() string {
+		return GetMethodNameAt(2)
+	}()
+
+	// then
+	assert.Equal(t, expectedMethodName, methodName)
+}
