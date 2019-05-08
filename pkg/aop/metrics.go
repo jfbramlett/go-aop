@@ -21,9 +21,7 @@ const (
 	resultKey 			= "result"
 )
 
-type timerMetricCtxKey struct{}
-
-var myTimerMetricCtxKey = timerMetricCtxKey{}
+var timerMetricCtxKey = contextKey{}
 
 
 // NewSpanFuncAdvice creats a new Advice used to wrap something as a new OpenTracing span
@@ -38,11 +36,12 @@ func (s *spanAdvice) Before(ctx context.Context) context.Context {
 	aop := AspectFromContext(ctx)
 	if aop == nil {
 		return ctx
+
 	}
 
 	// establish our span
-	structName := StructNameFromMethod(aop.MethodName)
-	methodName := MethodNameFromFullPath(aop.MethodName)
+	structName := common.StructNameFromMethod(aop.MethodName)
+	methodName := common.MethodNameFromFullPath(aop.MethodName)
 
 	if structName != "" {
 		methodName = fmt.Sprintf("%s.%s", structName, methodName)
@@ -54,15 +53,15 @@ func (s *spanAdvice) Before(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (s *spanAdvice) After(ctx context.Context, err error) context.Context {
+func (s *spanAdvice) After(ctx context.Context, err error) {
 	aop := AspectFromContext(ctx)
 	if aop == nil {
-		return ctx
+		return
 	}
 
 	span := opentracing.SpanFromContext(ctx)
 	if span == nil {
-		return ctx
+		return
 	}
 
 	result := resultSuccess
@@ -71,12 +70,10 @@ func (s *spanAdvice) After(ctx context.Context, err error) context.Context {
 	}
 
 	span.SetTag(serviceNameKey, GetServiceName())
-	span.SetTag(methodNameKey, MethodNameFromFullPath(aop.MethodName))
+	span.SetTag(methodNameKey, common.MethodNameFromFullPath(aop.MethodName))
 	span.SetTag(resultKey, result)
 
 	span.Finish()
-
-	return ctx
 }
 
 // NewTimedFuncAdvice creates a new Advice that will capture method execution time
@@ -114,20 +111,20 @@ func (t *timedFuncAdvice) Before(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	wrappedContext := common.PushToContext(ctx, myTimerMetricCtxKey, time.Now())
+	wrappedContext := context.WithValue(ctx, timerMetricCtxKey, time.Now())
 
 	return wrappedContext
 }
 
-func (t *timedFuncAdvice) After(ctx context.Context, err error) context.Context {
+func (t *timedFuncAdvice) After(ctx context.Context, err error) {
 	aop := AspectFromContext(ctx)
 	if aop == nil {
-		return ctx
+		return
 	}
 
 	timerStart, found := t.getStartTime(ctx)
 	if !found {
-		return ctx
+		return
 	}
 
 	result := resultSuccess
@@ -137,16 +134,15 @@ func (t *timedFuncAdvice) After(ctx context.Context, err error) context.Context 
 
 	ms := float64(time.Since(timerStart).Nanoseconds()) / 1e6
 
-	values := []string {GetServiceName(), MethodNameFromFullPath(t.getCallingMethod(aop.MethodName)), MethodNameFromFullPath(aop.MethodName), result}
+	values := []string {GetServiceName(), common.MethodNameFromFullPath(t.getCallingMethod(aop.MethodName)),
+		common.MethodNameFromFullPath(aop.MethodName), result}
 
 	// Log the metric
 	t.quantiles.WithLabelValues(values...).Observe(ms)
-
-	return ctx
 }
 
 func (t *timedFuncAdvice) getStartTime(ctx context.Context) (time.Time, bool) {
-	ctx, ctxVal := common.PopFromContext(ctx, myTimerMetricCtxKey)
+	ctxVal := ctx.Value(timerMetricCtxKey)
 	if ctxVal != nil {
 		if timeStart, ok := ctxVal.(time.Time); ok {
 			return timeStart, true

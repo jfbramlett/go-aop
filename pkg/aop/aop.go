@@ -2,10 +2,8 @@ package aop
 
 import (
 	"context"
-	"github.com/jfbramlett/go-aop/pkg/common"
 	"regexp"
 	"runtime"
-	"strings"
 )
 
 const (
@@ -14,15 +12,15 @@ const (
 	CallsBackToMethod = 2
 )
 
-type aopCtxKey struct{}
+type contextKey struct{}
 
-var myAopCtxKey = aopCtxKey{}
+var aopCtxKey = contextKey{}
 
 
 // Advice is the interface implemented to handle a cross-cutting concern
 type Advice interface {
 	Before(ctx context.Context) context.Context
-	After(ctx context.Context, err error) context.Context
+	After(ctx context.Context, err error)
 }
 
 // AspectMgr is responsible for handling identifying and running our cross cutting concern
@@ -30,7 +28,7 @@ type AspectMgr interface {
 	GetServiceName() string
 	RegisterJoinPoint(pointcut Pointcut, advice Advice)
 	Before(ctx context.Context, method string) context.Context
-	After(ctx context.Context, err error) context.Context
+	After(ctx context.Context, err error)
 }
 
 var globalAspectMgr AspectMgr
@@ -91,7 +89,7 @@ func (a *aspectMgr) Before(ctx context.Context, method string) context.Context {
 	}
 
 	if len(ac.joinPoints) > 0 {
-		ctx = a.contextWithAspect(ctx, ac)
+		ctx = context.WithValue(ctx, aopCtxKey, ac)
 
 		for _, r := range ac.joinPoints {
 			ctx = r.advice.Before(ctx)
@@ -101,27 +99,14 @@ func (a *aspectMgr) Before(ctx context.Context, method string) context.Context {
 	return ctx
 }
 
-func (a *aspectMgr) After(ctx context.Context, err error) context.Context {
+func (a *aspectMgr) After(ctx context.Context, err error) {
 	aop  := AspectFromContext(ctx)
 	if aop != nil {
 		for i := len(aop.joinPoints) - 1; i >= 0 ; i-- {
-			ctx = aop.joinPoints[i].advice.After(ctx, err)
+			aop.joinPoints[i].advice.After(ctx, err)
 		}
 	}
-
-	return a.removeAspectFromContext(ctx)
 }
-
-func (a *aspectMgr) contextWithAspect(ctx context.Context, aop *Aspect) context.Context {
-	return common.PushToContext(ctx, myAopCtxKey, aop)
-}
-
-func (a *aspectMgr) removeAspectFromContext(ctx context.Context) context.Context {
-	ctx, _ = common.PopFromContext(ctx, myAopCtxKey)
-	return ctx
-}
-
-
 
 func InitAOP(service string) {
 	globalAspectMgr = &aspectMgr{serviceName: service, joinPoints: make([]joinPoint, 0)}
@@ -152,11 +137,9 @@ func Before(ctx context.Context) context.Context {
 	}
 }
 
-func After(ctx context.Context, err error) context.Context {
+func After(ctx context.Context, err error) {
 	if globalAspectMgr != nil {
-		return globalAspectMgr.After(ctx, err)
-	} else {
-		return ctx
+		globalAspectMgr.After(ctx, err)
 	}
 }
 
@@ -165,21 +148,6 @@ func GetMethodName() string {
 	return getMethodNameAtOffset(CallsBackToMethod)
 }
 
-// StructNameFromMethod gets the struct name from a fully qualified method name (or returns a blank if there is no struct
-func StructNameFromMethod(methodName string) string {
-	idx := strings.LastIndex(methodName, "(")
-	if idx > 0 {
-		structName := methodName[idx+1:]
-		idx = strings.LastIndex(structName, ")")
-		if idx > 0 {
-			structName = structName[:idx]
-			structName = strings.TrimPrefix(structName, "*")
-			return structName
-		}
-	}
-
-	return ""
-}
 
 func getMethodNameAtOffset(offset int) string {
 	pc, _, _, ok := runtime.Caller(offset)
@@ -192,18 +160,10 @@ func getMethodNameAtOffset(offset int) string {
 }
 
 
-func MethodNameFromFullPath(fullMethod string) string {
-	idx := strings.LastIndex(fullMethod, ".")
-	if idx > 0 {
-		return fullMethod[idx+1:]
-	}
-	return fullMethod
-}
-
 func AspectFromContext(ctx context.Context) *Aspect {
-	stackItem := common.FromContext(ctx, myAopCtxKey)
-	if stackItem != nil {
-		if aopItem, ok := stackItem.(*Aspect); ok {
+	ctxVal := ctx.Value(aopCtxKey)
+	if ctxVal != nil {
+		if aopItem, ok := ctxVal.(*Aspect); ok {
 			return aopItem
 		}
 	}

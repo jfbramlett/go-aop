@@ -79,8 +79,7 @@ func TestAspectFromContext(t *testing.T) {
 	t.Run("aspect_exist", func(t *testing.T) {
 		// given
 		expectedAspect := &Aspect{}
-		mgr := aspectMgr{}
-		ctx := mgr.contextWithAspect(context.Background(), expectedAspect)
+		ctx := context.WithValue(context.Background(), aopCtxKey, expectedAspect)
 
 		// when
 		aspect := AspectFromContext(ctx)
@@ -93,14 +92,12 @@ func TestAspectFromContext(t *testing.T) {
 		// given
 		initialAspect := &Aspect{}
 		expectedAspect := &Aspect{}
-		mgr := aspectMgr{}
-		ctx := mgr.contextWithAspect(context.Background(), initialAspect)
-		ctx = mgr.contextWithAspect(ctx, expectedAspect)
+		origCtx := context.WithValue(context.Background(), aopCtxKey, initialAspect)
+		ctx := context.WithValue(origCtx, aopCtxKey, expectedAspect)
 
 		// when
 		poppedAspect := AspectFromContext(ctx)
-		newCtx := mgr.removeAspectFromContext(ctx)
-		aspect := AspectFromContext(newCtx)
+		aspect := AspectFromContext(origCtx)
 
 		// then
 		assert.Equal(t, expectedAspect, poppedAspect)
@@ -120,76 +117,12 @@ func TestAspectFromContext(t *testing.T) {
 
 }
 
-func TestMethodNameFromFullPath(t *testing.T) {
-	t.Run("test_full_name", func(t *testing.T) {
-		// given
-		expectedMethodName := "MyMethod"
-		fullPath := "github.com/jfbramlett/go-aop/pkg/metrics." + expectedMethodName
-
-		// when
-		methodName := MethodNameFromFullPath(fullPath)
-
-		// then
-		assert.Equal(t, expectedMethodName, methodName)
-	})
-
-	t.Run("test_malformed_name", func(t *testing.T) {
-		// given
-		expectedMethodName := "MyMethod"
-
-		// when
-		methodName := MethodNameFromFullPath(expectedMethodName)
-
-		// then
-		assert.Equal(t, expectedMethodName, methodName)
-	})
-
-}
-
-func TestStructNameFromMethodt(t *testing.T) {
-	t.Run("test_struct_name", func(t *testing.T) {
-		// given
-		methodName := "github.com/jfbramlett/go-aop/pkg/aop.(sampleStruct).Method1"
-		expectedStructName := "sampleStruct"
-
-		// when
-		structName := StructNameFromMethod(methodName)
-
-		// then
-		assert.Equal(t, expectedStructName, structName)
-	})
-
-	t.Run("test_ptr_struct_name", func(t *testing.T) {
-		// given
-		methodName := "github.com/jfbramlett/go-aop/pkg/aop.(*sampleStruct).Method1"
-		expectedStructName := "sampleStruct"
-
-		// when
-		structName := StructNameFromMethod(methodName)
-
-		// then
-		assert.Equal(t, expectedStructName, structName)
-	})
-
-	t.Run("test_no_struct_name", func(t *testing.T) {
-		// given
-		methodName := "github.com/jfbramlett/go-aop/pkg/aop.Method1"
-		expectedStructName := ""
-
-		// when
-		structName := StructNameFromMethod(methodName)
-
-		// then
-		assert.Equal(t, expectedStructName, structName)
-	})
-}
 
 type sampleStruct struct {
 	collector		*aspectCollector
 }
 
-func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
-	var err error
+func (s *sampleStruct) Method1(arg1 string, arg2 int) (result string, err error) {
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
@@ -198,8 +131,7 @@ func (s *sampleStruct) Method1(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
-	var err error
+func (s *sampleStruct) Method2(arg1 string, arg2 int) (result string, err error) {
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
@@ -208,8 +140,7 @@ func (s *sampleStruct) Method2(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
-	var err error
+func (s *sampleStruct) Method3(arg1 string, arg2 int) (result string, err error) {
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
@@ -218,8 +149,7 @@ func (s *sampleStruct) Method3(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
-	var err error
+func (s *sampleStruct) Special(arg1 string, arg2 int) (result string, err error) {
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
@@ -228,8 +158,7 @@ func (s *sampleStruct) Special(arg1 string, arg2 int) (string, error) {
 	return "success", nil
 }
 
-func (s *sampleStruct) privateMethod1(arg1 string, arg2 int) (string, error) {
-	var err error
+func (s *sampleStruct) privateMethod1(arg1 string, arg2 int) (result string, err error) {
 	ctx := Before(context.Background())
 	defer func() {After(ctx, err)}()
 
@@ -249,10 +178,9 @@ func (l *loggingAspect) Before(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (l *loggingAspect) After(ctx context.Context, err error) context.Context {
+func (l *loggingAspect) After(ctx context.Context, err error) {
 	definition := AspectFromContext(ctx)
 	l.collector.Collect(AfterFrame, definition.MethodName, LoggingAdvice)
-	return ctx
 }
 
 type countingAspect struct {
@@ -265,10 +193,9 @@ func (c *countingAspect) Before(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (c *countingAspect) After(ctx context.Context, err error) context.Context {
+func (c *countingAspect) After(ctx context.Context, err error) {
 	definition := AspectFromContext(ctx)
 	c.collector.Collect(AfterFrame, definition.MethodName, CountAdvice)
-	return ctx
 }
 
 

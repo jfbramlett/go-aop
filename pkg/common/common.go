@@ -1,53 +1,9 @@
 package common
 
 import (
-	"context"
-	"github.com/golang-collections/collections/stack"
 	"runtime"
+	"strings"
 )
-
-func PushToContext(ctx context.Context, ctxKey interface{}, value interface{}) context.Context {
-	var dataStack *stack.Stack
-	var ok bool
-
-	ctxStack := ctx.Value(ctxKey)
-	if ctxStack == nil {
-		dataStack = stack.New()
-		ctx = context.WithValue(ctx, ctxKey, dataStack)
-	} else {
-		if dataStack, ok = ctxStack.(*stack.Stack); !ok {
-			return ctx
-		}
-	}
-
-	dataStack.Push(value)
-
-	return ctx
-}
-
-func PopFromContext(ctx context.Context, ctxKey interface{}) (context.Context, interface{}) {
-	var item interface{}
-
-	ctxStack := ctx.Value(ctxKey)
-	if ctxStack != nil {
-		if dataStack, ok := ctxStack.(*stack.Stack); ok {
-			item = dataStack.Pop()
-		}
-	}
-
-	return ctx, item
-}
-
-func FromContext(ctx context.Context, ctxKey interface{}) interface{} {
-	ctxStack := ctx.Value(ctxKey)
-	if ctxStack != nil {
-		if aopStack, ok := ctxStack.(*stack.Stack); ok {
-			return aopStack.Peek()
-		}
-	}
-
-	return nil
-}
 
 func GetCallingMethodName() string {
 	return GetMethodNameAt(3)
@@ -61,4 +17,28 @@ func GetMethodNameAt(idx int) string {
 	}
 
 	return "unknown"
+}
+
+func MethodNameFromFullPath(fullMethod string) string {
+	idx := strings.LastIndex(fullMethod, ".")
+	if idx > 0 {
+		return fullMethod[idx+1:]
+	}
+	return fullMethod
+}
+
+// StructNameFromMethod gets the struct name from a fully qualified method name (or returns a blank if there is no struct
+func StructNameFromMethod(methodName string) string {
+	idx := strings.LastIndex(methodName, "(")
+	if idx > 0 {
+		structName := methodName[idx+1:]
+		idx = strings.LastIndex(structName, ")")
+		if idx > 0 {
+			structName = structName[:idx]
+			structName = strings.TrimPrefix(structName, "*")
+			return structName
+		}
+	}
+
+	return ""
 }
