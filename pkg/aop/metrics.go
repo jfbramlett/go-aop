@@ -162,9 +162,8 @@ func (t *timedFuncAdvice) getCallingMethod(toMethod string) string {
 				details := runtime.FuncForPC(pc)
 				if ok && details != nil {
 					return details.Name()
-				} else {
-					break
 				}
+				break
 			}
 		} else {
 			break

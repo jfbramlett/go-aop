@@ -2,11 +2,7 @@ package aop
 
 import (
 	"context"
-	"fmt"
-	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/logging"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 )
 
 type loggingCtxKey struct{}

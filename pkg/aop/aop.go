@@ -7,8 +7,11 @@ import (
 )
 
 const (
+	// UnknownService is a flag indicating the service is not known
 	UnknownService    = "Unknown"
+	// UnknownMethod represents an unknown method
 	UnknownMethod     = "Unknown"
+	// CallsBackToMethod indicates the number of steps back the call stack to use
 	CallsBackToMethod = 2
 )
 
@@ -108,16 +111,17 @@ func (a *aspectMgr) After(ctx context.Context, err error) {
 	}
 }
 
+// InitAOP initializes our aspects
 func InitAOP(service string) {
 	globalAspectMgr = &aspectMgr{serviceName: service, joinPoints: make([]joinPoint, 0)}
 }
 
+// GetServiceName gets the name of the service
 func GetServiceName() string {
 	if globalAspectMgr != nil {
 		return globalAspectMgr.GetServiceName()
-	} else {
-		return UnknownService
 	}
+	return UnknownService
 }
 
 // RegisterJoinPoint is function used to register a new advice with the given regex pointcut (will be compared
@@ -132,11 +136,11 @@ func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 func Before(ctx context.Context) context.Context {
 	if globalAspectMgr != nil {
 		return globalAspectMgr.Before(ctx, getMethodNameAtOffset(CallsBackToMethod))
-	} else {
-		return ctx
 	}
+	return ctx
 }
 
+// After is a global func used to execute our aspect
 func After(ctx context.Context, err error) {
 	if globalAspectMgr != nil {
 		globalAspectMgr.After(ctx, err)
@@ -159,7 +163,7 @@ func getMethodNameAtOffset(offset int) string {
 	return UnknownMethod
 }
 
-
+// AspectFromContext gets the current aspect from the context
 func AspectFromContext(ctx context.Context) *Aspect {
 	ctxVal := ctx.Value(aopCtxKey)
 	if ctxVal != nil {
