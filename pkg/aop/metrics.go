@@ -21,7 +21,8 @@ const (
 	resultKey 			= "result"
 )
 
-var timerMetricCtxKey = contextKey{}
+type metricCtxKey struct {}
+var timerMetricCtxKey = metricCtxKey{}
 
 
 // NewSpanFuncAdvice creats a new Advice used to wrap something as a new OpenTracing span
