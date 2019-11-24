@@ -31,7 +31,7 @@ func (l *channelLogWriter) Init() {
 		for  {
 			msg := <- l.outputChannel
 			if len(msg) > 0 {
-				l.writer.WriteString(msg + "\n")
+				_, _ = l.writer.WriteString(msg + "\n")
 				l.waitGroup.Done()
 			}
 		}
@@ -58,7 +58,7 @@ type simpleLogWriter struct {
 
 func (l *simpleLogWriter) WriteString(msg string) (int, error) {
 	if len(msg) > 0 {
-		l.writer.WriteString(msg)
+		_, _ = l.writer.WriteString(msg)
 	}
 	return len(msg), nil
 }
