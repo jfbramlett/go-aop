@@ -2,3 +2,4 @@
 routeguide/*.go
 bin/
 go.sum
+vendor/
