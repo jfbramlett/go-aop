@@ -1,13 +1,10 @@
 package rabbitmq
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/messaging"
 	"github.com/streadway/amqp"
-	"log"
 )
 
 
