@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/messaging"
 	"github.com/streadway/amqp"
 	"log"
@@ -67,8 +68,7 @@ func (rr *rabbitMQReceiver) OnMessage(ctx context.Context, callback messaging.Ca
 	go func() {
 		for d := range msgs {
 			envelope := messaging.Envelope{}
-			decoder := json.NewDecoder(bytes.NewReader(d.Body))
-			err := decoder.Decode(&envelope)
+			err := common.FromJSON(string(d.Body), &envelope)
 			if err != nil {
 				continue
 			}

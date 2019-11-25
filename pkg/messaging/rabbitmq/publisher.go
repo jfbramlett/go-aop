@@ -2,10 +2,9 @@ package rabbitmq
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/messaging"
 	"github.com/streadway/amqp"
-	"strings"
 )
 
 func NewRabbitMQSender(config Config) (messaging.MessageSender, error) {
@@ -44,21 +43,18 @@ type rabbitMQSender struct {
 func (r *rabbitMQSender) Publish(ctx context.Context, msg interface{}) error {
 	envelope := messaging.Envelope{Content: msg}
 
-	content := &strings.Builder{}
-	enc := json.NewEncoder(content)
-	enc.SetIndent("", "    ")
-	if err := enc.Encode(envelope); err != nil {
+	content, err := common.ToJSON(envelope)
+	if err != nil {
 		return err
 	}
-
-	err := r.channel.Publish(
+	err = r.channel.Publish(
 		"",     // exchange
 		r.queue.Name, // routing key
 		false,  // mandatory
 		false,  // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(content.String()),
+			Body:        []byte(content),
 		})
 
 	return err
