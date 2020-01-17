@@ -25,7 +25,8 @@ func (s *loggingAdvice) Before(ctx context.Context) context.Context {
 }
 
 func (s *loggingAdvice) After(ctx context.Context, err error) {
-	logger := logging.GetLogger(ctx)
+	method := ctx.Value(Method).(string)
+	logger := logging.GetLoggerFor(ctx, method)
 	if err != nil {
 		logger.Debugf("completed with error %s", err)
 	} else {
