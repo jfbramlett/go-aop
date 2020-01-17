@@ -18,7 +18,8 @@ type loggingAdvice struct {
 }
 
 func (s *loggingAdvice) Before(ctx context.Context) context.Context {
-	logger := logging.GetLogger(ctx)
+	method := ctx.Value(Method).(string)
+	logger := logging.GetLoggerFor(ctx, method)
 	logger.Debug("starting")
 	return ctx
 }

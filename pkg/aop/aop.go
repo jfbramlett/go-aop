@@ -13,6 +13,8 @@ const (
 	UnknownMethod     = "Unknown"
 	// CallsBackToMethod indicates the number of steps back the call stack to use
 	CallsBackToMethod = 2
+	// Method is a token used to store the calling method in the context
+	Method = "method"
 )
 
 type contextKey struct{}
@@ -91,8 +93,10 @@ func (a *aspectMgr) Before(ctx context.Context, method string) context.Context {
 		}
 	}
 
+	beforeCtx := context.WithValue(ctx, Method, method)
+
 	if len(ac.joinPoints) > 0 {
-		ctx = context.WithValue(ctx, aopCtxKey, ac)
+		ctx = context.WithValue(beforeCtx, aopCtxKey, ac)
 
 		for _, r := range ac.joinPoints {
 			ctx = r.advice.Before(ctx)
