@@ -17,6 +17,10 @@ func AddMDC(ctx context.Context, vals map[string]interface{}) context.Context {
 	return context.WithValue(ctx, mdcCtxKey, currentMdc)
 }
 
+func AddMDCValue(ctx context.Context, key string, value interface{}) context.Context {
+	return AddMDC(ctx, map[string]interface{} {key: value})
+}
+
 func getMDC(ctx context.Context) map[string]interface{} {
 	current := ctx.Value(mdcCtxKey)
 	if current == nil {
