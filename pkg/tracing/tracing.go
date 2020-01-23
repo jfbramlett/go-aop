@@ -1,7 +1,8 @@
 package tracing
 
 import (
-	"github.com/opentracing/opentracing-go"
+	"context"
+
 	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	reporterhttp "github.com/openzipkin/zipkin-go/reporter/http"
@@ -14,10 +15,11 @@ func InitTracing(cfg TracingConfig) {
 	if err != nil {
 		return
 	}
-	opentracing.SetGlobalTracer(tracer)
+
+	globalTracer = tracer
 }
 
-func NewTracer(cfg TracingConfig) (opentracing.Tracer, error) {
+func NewTracer(cfg TracingConfig) (*zipkin.Tracer, error) {
 	// The reporter sends traces to zipkin server
 	reporter := reporterhttp.NewReporter(cfg.ReporterUrl)
 
@@ -40,4 +42,18 @@ func NewTracer(cfg TracingConfig) (opentracing.Tracer, error) {
 	}
 
 	return t, err
+}
+
+var globalTracer *zipkin.Tracer
+
+func GetGlobalTracer() *zipkin.Tracer {
+	return globalTracer
+}
+
+func StartSpanFromContext(ctx context.Context, name string, opts ...zipkin.SpanOption) (zipkin.Span, context.Context) {
+	return globalTracer.StartSpanFromContext(ctx, name, opts...)
+}
+
+func SpanFromContext(ctx context.Context) zipkin.Span {
+	return zipkin.SpanFromContext(ctx)
 }
