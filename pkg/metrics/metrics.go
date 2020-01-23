@@ -1,16 +1,17 @@
 package metrics
 
 import (
-    "github.com/prometheus/client_golang/prometheus/promhttp"
-    "net/http"
+	"fmt"
+	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func InitMetrics() {
-    go ExposeMetrics()
+func InitMetrics(cfg MetricsConfig) {
+	go ExposeMetrics(cfg)
 }
 
-func ExposeMetrics() {
-    http.Handle("/metrics", promhttp.Handler())
-    _ = http.ListenAndServe(":2112", nil)
+func ExposeMetrics(cfg MetricsConfig) {
+	http.Handle(cfg.URL, promhttp.Handler())
+	_ = http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), nil)
 }
-
