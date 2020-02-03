@@ -71,6 +71,7 @@ type joinPoint struct {
 type aspectMgr struct {
 	joinPoints  []joinPoint
 	serviceName string
+	methodMap   map[string]*Aspect
 }
 
 // GetServiceName gets the name of the service we are running in
@@ -85,12 +86,15 @@ func (a *aspectMgr) RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 
 // Before loops over all of the registered joinpoints and executes the Before advice for those whose pointcuts match
 func (a *aspectMgr) Before(ctx context.Context, method string) context.Context {
-	ac := &Aspect{joinPoints: make([]joinPoint, 0), MethodName: method}
-
-	for _, k := range a.joinPoints {
-		if k.pointcut.Matches(method) {
-			ac.joinPoints = append(ac.joinPoints, k)
+	ac, found := a.methodMap[method]
+	if !found {
+		ac = &Aspect{joinPoints: make([]joinPoint, 0), MethodName: method}
+		for _, k := range a.joinPoints {
+			if k.pointcut.Matches(method) {
+				ac.joinPoints = append(ac.joinPoints, k)
+			}
 		}
+		a.methodMap[method] = ac
 	}
 
 	beforeCtx := context.WithValue(ctx, Method, method)
@@ -117,7 +121,10 @@ func (a *aspectMgr) After(ctx context.Context, err error) {
 
 // InitAOP initializes our aspects
 func InitAOP(service string) {
-	globalAspectMgr = &aspectMgr{serviceName: service, joinPoints: make([]joinPoint, 0)}
+	globalAspectMgr = &aspectMgr{serviceName: service, 
+		joinPoints: make([]joinPoint, 0),
+		methodMap: make(map[string]*Aspect),
+	}
 }
 
 // GetServiceName gets the name of the service
