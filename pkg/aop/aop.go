@@ -81,7 +81,14 @@ func (a *aspectMgr) GetServiceName() string {
 
 // RegisterJoinPoint registers a new advice for a given pointcut. The pointcut is a regex pattern used to match against a method name
 func (a *aspectMgr) RegisterJoinPoint(pointcut Pointcut, advice Advice) {
-	a.joinPoints = append(a.joinPoints, joinPoint{pointcut: pointcut, advice: advice})
+	jp := joinPoint{pointcut: pointcut, advice: advice}
+	a.joinPoints = append(a.joinPoints, jp)
+
+	for method, aspect := range a.methodMap {
+		if jp.pointcut.Matches(method) {
+			aspect.joinPoints = append(aspect.joinPoints, jp)
+		}
+	}
 }
 
 // Before loops over all of the registered joinpoints and executes the Before advice for those whose pointcuts match

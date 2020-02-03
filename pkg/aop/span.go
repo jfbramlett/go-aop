@@ -52,9 +52,10 @@ func (s *spanAdvice) After(ctx context.Context, err error) {
 		result = resultFailure
 	}
 
-	span.Tag(serviceNameKey, GetServiceName())
-	span.Tag(methodNameKey, common.MethodNameFromFullPath(aop.MethodName))
-	span.Tag(resultKey, result)
+	span.SetTag(componentKey, component)
+	span.SetTag(serviceNameKey, GetServiceName())
+	span.SetTag(methodNameKey, common.MethodNameFromFullPath(aop.MethodName))
+	span.SetTag(resultKey, result)
 
 	span.Finish()
 }

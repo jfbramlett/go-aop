@@ -13,6 +13,7 @@ const (
 	resultSuccess  		= "success"
 	resultFailure  		= "failure"
 	component      		= "go-common-timedfunc"
+	componentKey		= "component"
 	serviceNameKey 		= "service_name"
 	callingMethodKey 	= "calling_method"
 	methodNameKey 		= "method"

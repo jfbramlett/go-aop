@@ -2,58 +2,51 @@ package tracing
 
 import (
 	"context"
+	"github.com/opentracing/opentracing-go"
 
+	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
 	"github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/model"
-	reporterhttp "github.com/openzipkin/zipkin-go/reporter/http"
+	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
 const EndpointURL = "http://localhost:9411/api/v2/spans"
 
 func InitTracing(cfg TracingConfig) {
-	tracer, err := NewTracer(cfg)
+	err := NewTracer(cfg)
 	if err != nil {
 		return
 	}
-
-	globalTracer = tracer
 }
 
-func NewTracer(cfg TracingConfig) (*zipkin.Tracer, error) {
-	// The reporter sends traces to zipkin server
-	reporter := reporterhttp.NewReporter(cfg.ReporterUrl)
+func NewTracer(cfg TracingConfig) error {
 
-	// Local endpoint represent the local service information
-	localEndpoint := &model.Endpoint{ServiceName: cfg.ReporterUrl, Port: cfg.ReporterPort}
+	reporter := zipkinhttp.NewReporter("http://zipkinhost:9411/api/v2/spans")
 
-	// Sampler tells you which traces are going to be sampled or not. In this case we will record 100% (1.00) of traces.
-	sampler, err := zipkin.NewCountingSampler(1)
+	// create our local service endpoint
+	endpoint, err := zipkin.NewEndpoint("myService", "myservice.mydomain.com:80")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	t, err := zipkin.NewTracer(
-		reporter,
-		zipkin.WithSampler(sampler),
-		zipkin.WithLocalEndpoint(localEndpoint),
-	)
+	// initialize our tracer
+	nativeTracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(endpoint))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return t, err
+	// use zipkin-go-opentracing to wrap our tracer
+	tracer := zipkinot.Wrap(nativeTracer)
+
+	// optionally set as Global OpenTracing tracer instance
+	opentracing.SetGlobalTracer(tracer)
+
+	return err
 }
 
-var globalTracer *zipkin.Tracer
-
-func GetGlobalTracer() *zipkin.Tracer {
-	return globalTracer
+func StartSpanFromContext(ctx context.Context, name string, opts...opentracing.StartSpanOption) (opentracing.Span, context.Context) {
+	return opentracing.StartSpanFromContext(ctx, name, opts...)
 }
 
-func StartSpanFromContext(ctx context.Context, name string, opts ...zipkin.SpanOption) (zipkin.Span, context.Context) {
-	return globalTracer.StartSpanFromContext(ctx, name, opts...)
-}
-
-func SpanFromContext(ctx context.Context) zipkin.Span {
-	return zipkin.SpanFromContext(ctx)
+func SpanFromContext(ctx context.Context) opentracing.Span {
+	return opentracing.SpanFromContext(ctx)
 }
