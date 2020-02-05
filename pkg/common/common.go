@@ -9,6 +9,10 @@ func GetCallingMethodName() string {
 	return GetMethodNameAt(3)
 }
 
+func GetSimpleMethodName() string {
+	return MethodNameFromFullPath(GetMethodNameAt(3))
+}
+
 func GetMethodNameAt(idx int) string {
 	pc, _, _, ok := runtime.Caller(idx)
 	details := runtime.FuncForPC(pc)

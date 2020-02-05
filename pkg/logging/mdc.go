@@ -1,6 +1,9 @@
 package logging
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 func AddMDC(ctx context.Context, vals map[string]interface{}) context.Context {
 	current := ctx.Value(mdcCtxKey)
@@ -19,6 +22,19 @@ func AddMDC(ctx context.Context, vals map[string]interface{}) context.Context {
 
 func AddMDCValue(ctx context.Context, key string, value interface{}) context.Context {
 	return AddMDC(ctx, map[string]interface{} {key: value})
+}
+
+func AddMDCValues(ctx context.Context, values... interface{}) context.Context {
+	if len(values) % 2 != 0 {
+		values = values[:len(values)-1]
+	}
+	vals := make(map[string]interface{})
+	for i := 1; i < len(values); i = i + 2 {
+		key := fmt.Sprintf("%v", values[i-1])
+		vals[key] = values[i]
+	}
+
+	return AddMDC(ctx, vals)
 }
 
 func getMDC(ctx context.Context) map[string]interface{} {
