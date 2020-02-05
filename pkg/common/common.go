@@ -9,7 +9,7 @@ func GetCallingMethodName() string {
 	return GetMethodNameAt(3)
 }
 
-func GetSimpleMethodName() string {
+func GetCallingSimpleMethodName() string {
 	return MethodNameFromFullPath(GetMethodNameAt(3))
 }
 

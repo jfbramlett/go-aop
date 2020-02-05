@@ -2,8 +2,8 @@ package aop
 
 import (
 	"context"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"regexp"
-	"runtime"
 )
 
 const (
@@ -153,7 +153,7 @@ func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 // Before is the function invoked at the start of a method to execute any registered joinPoints
 func Before(ctx context.Context) context.Context {
 	if globalAspectMgr != nil {
-		return globalAspectMgr.Before(ctx, getMethodNameAtOffset(CallsBackToMethod))
+		return globalAspectMgr.Before(ctx, common.GetCallingSimpleMethodName())
 	}
 	return ctx
 }
@@ -163,22 +163,6 @@ func After(ctx context.Context, err error) {
 	if globalAspectMgr != nil {
 		globalAspectMgr.After(ctx, err)
 	}
-}
-
-// GetMethodName returns the method that has invoked the code that has invokved this method
-func GetMethodName() string {
-	return getMethodNameAtOffset(CallsBackToMethod)
-}
-
-
-func getMethodNameAtOffset(offset int) string {
-	pc, _, _, ok := runtime.Caller(offset)
-	details := runtime.FuncForPC(pc)
-	if ok && details != nil {
-		return details.Name()
-	}
-
-	return UnknownMethod
 }
 
 // AspectFromContext gets the current aspect from the context
