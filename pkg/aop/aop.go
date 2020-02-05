@@ -153,7 +153,8 @@ func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 // Before is the function invoked at the start of a method to execute any registered joinPoints
 func Before(ctx context.Context) context.Context {
 	if globalAspectMgr != nil {
-		return globalAspectMgr.Before(ctx, common.GetCallingSimpleMethodName())
+		callingMethod := common.GetCallingMethodName()
+		return globalAspectMgr.Before(ctx, common.BasicQualifierFromMethod(callingMethod))
 	}
 	return ctx
 }

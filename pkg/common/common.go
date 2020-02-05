@@ -1,16 +1,13 @@
 package common
 
 import (
+	"fmt"
 	"runtime"
 	"strings"
 )
 
 func GetCallingMethodName() string {
 	return GetMethodNameAt(3)
-}
-
-func GetCallingSimpleMethodName() string {
-	return MethodNameFromFullPath(GetMethodNameAt(3))
 }
 
 func GetMethodNameAt(idx int) string {
@@ -23,6 +20,7 @@ func GetMethodNameAt(idx int) string {
 	return "unknown"
 }
 
+// MethodNameFromFullPath get the method name from a full path string
 func MethodNameFromFullPath(fullMethod string) string {
 	idx := strings.LastIndex(fullMethod, ".")
 	if idx > 0 {
@@ -45,4 +43,11 @@ func StructNameFromMethod(methodName string) string {
 	}
 
 	return ""
+}
+
+func BasicQualifierFromMethod(fullMethod string) string {
+	structName := StructNameFromMethod(fullMethod)
+	methodName := MethodNameFromFullPath(fullMethod)
+
+	return fmt.Sprintf("%s.%s", structName, methodName)
 }
