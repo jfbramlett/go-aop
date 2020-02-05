@@ -14,7 +14,7 @@ func InitLogging() {
 // GetLogger is our factory function for obtaining a new logger for the given context. The log config is based on the
 // calling method name
 func GetLogger(ctx context.Context) Logger {
-	methodName := common.GetSimpleMethodName()
+	methodName := common.GetCallingSimpleMethodName()
 	return globalLogConfig.GetLogger(ctx, methodName)
 }
 
