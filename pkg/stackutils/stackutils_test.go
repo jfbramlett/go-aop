@@ -1,4 +1,4 @@
-package common
+package stackutils
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -7,7 +7,7 @@ import (
 
 func TestGetMethodName(t *testing.T) {
 	// given
-	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/common.TestGetMethodName"
+	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/stackutils.TestGetMethodName"
 
 	// when
 	methodName := func() string {
@@ -20,7 +20,7 @@ func TestGetMethodName(t *testing.T) {
 
 func TestGetMethodNameAt(t *testing.T) {
 	// given
-	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/common.TestGetMethodNameAt"
+	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/stackutils.TestGetMethodNameAt"
 
 	// when
 	methodName := func() string {

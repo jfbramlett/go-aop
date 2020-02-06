@@ -3,12 +3,12 @@ package logging
 import (
 	"context"
 	"fmt"
-	"github.com/jfbramlett/go-aop/pkg/common"
+	"github.com/jfbramlett/go-aop/pkg/stackutils"
 )
 
 func ForCurrentMethod() *LoggingBuilder {
-	currentMethod := common.GetCallingMethodName()
-	name := common.BasicQualifierFromMethod(currentMethod)
+	currentMethod := stackutils.GetCallingMethodName()
+	name := stackutils.BasicQualifierFromMethod(currentMethod)
 	return &LoggingBuilder{fields: make(map[string]interface{}), named: name}
 }
 

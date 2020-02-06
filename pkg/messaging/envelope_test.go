@@ -1,10 +1,9 @@
 package messaging
 
 import (
-	"fmt"
-	"testing"
-
-	"github.com/jfbramlett/go-aop/pkg/common"
+    "fmt"
+    "github.com/jfbramlett/go-aop/pkg/jsonutils"
+    "testing"
 )
 
 type TestPayload struct {
@@ -15,7 +14,7 @@ type TestPayload struct {
 func TestSerializeDeserialize(t *testing.T) {
 	envelope := Envelope{Content: &TestPayload{Name: "John", Age: 50}}
 
-	str, err := common.ToJSON(envelope)
+	str, err := jsonutils.ToJSON(envelope)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -23,7 +22,7 @@ func TestSerializeDeserialize(t *testing.T) {
 	fmt.Println(str)
 
 	newEnvelope := Envelope{Content: ContentType()}
-	err = common.FromJSON(str, &newEnvelope)
+	err = jsonutils.FromJSON(str, &newEnvelope)
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -1,10 +1,10 @@
 package rabbitmq
 
 import (
-	"context"
-	"github.com/jfbramlett/go-aop/pkg/common"
-	"github.com/jfbramlett/go-aop/pkg/messaging"
-	"github.com/streadway/amqp"
+    "context"
+    "github.com/jfbramlett/go-aop/pkg/jsonutils"
+    "github.com/jfbramlett/go-aop/pkg/messaging"
+    "github.com/streadway/amqp"
 )
 
 func NewRabbitMQSender(config Config) (messaging.MessageSender, error) {
@@ -43,7 +43,7 @@ type rabbitMQSender struct {
 func (r *rabbitMQSender) Publish(ctx context.Context, msg interface{}) error {
 	envelope := messaging.Envelope{Content: msg}
 
-	content, err := common.ToJSON(envelope)
+	content, err := jsonutils.ToJSON(envelope)
 	if err != nil {
 		return err
 	}

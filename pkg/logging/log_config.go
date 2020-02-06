@@ -2,7 +2,7 @@ package logging
 
 import (
 	"context"
-	"github.com/jfbramlett/go-aop/pkg/common"
+	"github.com/jfbramlett/go-aop/pkg/stackutils"
 	"os"
 )
 
@@ -14,8 +14,8 @@ func InitLogging() {
 // GetLogger is our factory function for obtaining a new logger for the given context. The log config is based on the
 // calling method name
 func GetLogger(ctx context.Context) Logger {
-	callingMethod := common.GetCallingMethodName()
-	return globalLogConfig.GetLogger(ctx, common.BasicQualifierFromMethod(callingMethod))
+	callingMethod := stackutils.GetCallingMethodName()
+	return globalLogConfig.GetLogger(ctx, stackutils.BasicQualifierFromMethod(callingMethod))
 }
 
 // GetLoggerFor is our factory function for obtaining a new logger for the given context with a config based on the given

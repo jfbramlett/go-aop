@@ -1,11 +1,11 @@
 package rabbitmq
 
 import (
-	"context"
+    "context"
+    "github.com/jfbramlett/go-aop/pkg/jsonutils"
 
-	"github.com/jfbramlett/go-aop/pkg/common"
-	"github.com/jfbramlett/go-aop/pkg/messaging"
-	"github.com/streadway/amqp"
+    "github.com/jfbramlett/go-aop/pkg/messaging"
+    "github.com/streadway/amqp"
 )
 
 func NewRabbitMQReceiver(config Config, callback messaging.Callback, contentType messaging.MsgContentTypeCreator) (messaging.MessageReceiver, error) {
@@ -60,7 +60,7 @@ func (rr *rabbitMQReceiver) Run() error {
 		for d := range msgs {
 			content := rr.contentType()
 			envelope := messaging.Envelope{Content: &content}
-			err := common.FromJSON(string(d.Body), &envelope)
+			err := jsonutils.FromJSON(string(d.Body), &envelope)
 			if err != nil {
 				continue
 			}

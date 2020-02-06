@@ -2,7 +2,7 @@ package aop
 
 import (
 	"context"
-	"github.com/jfbramlett/go-aop/pkg/common"
+	"github.com/jfbramlett/go-aop/pkg/stackutils"
 	"regexp"
 )
 
@@ -153,7 +153,7 @@ func RegisterJoinPoint(pointcut Pointcut, advice Advice) {
 // Before is the function invoked at the start of a method to execute any registered joinPoints
 func Before(ctx context.Context) context.Context {
 	if globalAspectMgr != nil {
-		return globalAspectMgr.Before(ctx, common.GetCallingMethodName())
+		return globalAspectMgr.Before(ctx, stackutils.GetCallingMethodName())
 	}
 	return ctx
 }

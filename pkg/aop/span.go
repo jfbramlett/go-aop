@@ -3,8 +3,8 @@ package aop
 import (
 	"context"
 	"fmt"
+	"github.com/jfbramlett/go-aop/pkg/stackutils"
 
-	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/tracing"
 )
 
@@ -24,8 +24,8 @@ func (s *spanAdvice) Before(ctx context.Context) context.Context {
 	}
 
 	// establish our span
-	structName := common.StructNameFromMethod(aop.MethodName)
-	methodName := common.MethodNameFromFullPath(aop.MethodName)
+	structName := stackutils.StructNameFromMethod(aop.MethodName)
+	methodName := stackutils.MethodNameFromFullPath(aop.MethodName)
 
 	if structName != "" {
 		methodName = fmt.Sprintf("%s.%s", structName, methodName)
@@ -54,7 +54,7 @@ func (s *spanAdvice) After(ctx context.Context, err error) {
 
 	span.SetTag(componentKey, component)
 	span.SetTag(serviceNameKey, GetServiceName())
-	span.SetTag(methodNameKey, common.MethodNameFromFullPath(aop.MethodName))
+	span.SetTag(methodNameKey, stackutils.MethodNameFromFullPath(aop.MethodName))
 	span.SetTag(resultKey, result)
 
 	span.Finish()

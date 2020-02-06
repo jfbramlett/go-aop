@@ -3,7 +3,7 @@ package aop
 import (
 	"context"
 	"fmt"
-	"github.com/jfbramlett/go-aop/pkg/common"
+	"github.com/jfbramlett/go-aop/pkg/stackutils"
 	"github.com/prometheus/client_golang/prometheus"
 	"runtime"
 	"time"
@@ -81,8 +81,8 @@ func (t *timedFuncAdvice) After(ctx context.Context, err error) {
 
 	ms := float64(time.Since(timerStart).Nanoseconds()) / 1e6
 
-	values := []string {GetServiceName(), common.MethodNameFromFullPath(t.getCallingMethod(aop.MethodName)),
-		common.MethodNameFromFullPath(aop.MethodName), result}
+	values := []string {GetServiceName(), stackutils.MethodNameFromFullPath(t.getCallingMethod(aop.MethodName)),
+		stackutils.MethodNameFromFullPath(aop.MethodName), result}
 
 	// Log the metric
 	t.quantiles.WithLabelValues(values...).Observe(ms)
