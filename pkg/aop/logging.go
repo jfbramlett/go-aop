@@ -2,6 +2,7 @@ package aop
 
 import (
 	"context"
+	"github.com/jfbramlett/go-aop/pkg/common"
 	"github.com/jfbramlett/go-aop/pkg/logging"
 )
 
@@ -19,14 +20,14 @@ type loggingAdvice struct {
 
 func (s *loggingAdvice) Before(ctx context.Context) context.Context {
 	method := ctx.Value(Method).(string)
-	logger, newCtx := logging.Named(method).Create(ctx)
+	logger, newCtx := logging.Named(common.BasicQualifierFromMethod(method)).Create(ctx)
 	logger.Debug("starting")
 	return newCtx
 }
 
 func (s *loggingAdvice) After(ctx context.Context, err error) {
 	method := ctx.Value(Method).(string)
-	logger, _ := logging.Named(method).Create(ctx)
+	logger, _ := logging.Named(common.BasicQualifierFromMethod(method)).Create(ctx)
 	if err != nil {
 		logger.Debugf("completed with error %s", err)
 	} else {

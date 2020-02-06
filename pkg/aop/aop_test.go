@@ -64,17 +64,6 @@ func TestGetServiceName(t *testing.T) {
 }
 
 
-func TestGetMethodName(t *testing.T) {
-	// given
-	expectedMethodName := "github.com/jfbramlett/go-aop/pkg/aop.TestGetMethodName"
-
-	// when
-	methodName := GetMethodName()
-
-	// then
-	assert.Equal(t, expectedMethodName, methodName)
-}
-
 func TestAspectFromContext(t *testing.T) {
 	t.Run("aspect_exist", func(t *testing.T) {
 		// given
