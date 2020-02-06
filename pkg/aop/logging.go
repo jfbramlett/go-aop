@@ -19,14 +19,14 @@ type loggingAdvice struct {
 
 func (s *loggingAdvice) Before(ctx context.Context) context.Context {
 	method := ctx.Value(Method).(string)
-	logger := logging.GetLoggerFor(ctx, method)
+	logger, newCtx := logging.Named(method).Create(ctx)
 	logger.Debug("starting")
-	return ctx
+	return newCtx
 }
 
 func (s *loggingAdvice) After(ctx context.Context, err error) {
 	method := ctx.Value(Method).(string)
-	logger := logging.GetLoggerFor(ctx, method)
+	logger, _ := logging.Named(method).Create(ctx)
 	if err != nil {
 		logger.Debugf("completed with error %s", err)
 	} else {

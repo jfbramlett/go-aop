@@ -3,7 +3,39 @@ package logging
 import (
 	"context"
 	"fmt"
+	"github.com/jfbramlett/go-aop/pkg/common"
 )
+
+func ForCurrentMethod() *LoggingBuilder {
+	currentMethod := common.GetCallingMethodName()
+	name := common.BasicQualifierFromMethod(currentMethod)
+	return &LoggingBuilder{fields: make(map[string]interface{}), named: name}
+}
+
+func Named(name string) *LoggingBuilder {
+	return &LoggingBuilder{fields: make(map[string]interface{}), named: name}
+}
+
+type LoggingBuilder struct {
+	named	string
+	fields 	map[string]interface{}
+}
+
+func (l *LoggingBuilder) WithField(key string, value interface{}) *LoggingBuilder {
+	l.fields[key] = value
+	return l
+}
+
+func (l *LoggingBuilder) And(key string, value interface{}) *LoggingBuilder {
+	l.fields[key] = value
+	return l
+}
+
+func (l *LoggingBuilder) Create(ctx context.Context) (Logger, context.Context) {
+	newCtx := AddMDC(ctx, l.fields)
+	return GetLoggerFor(newCtx, l.named), newCtx
+}
+
 
 func AddMDC(ctx context.Context, vals map[string]interface{}) context.Context {
 	current := ctx.Value(mdcCtxKey)
