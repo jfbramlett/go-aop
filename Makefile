@@ -5,7 +5,7 @@ DOCKER_TAG = orgunitsmigrator
 # Default Target
 
 .PHONY: compile
-build: lint vendor
+build: vendor
 	go build -mod=vendor ./pkg/...
 
 # Tools
