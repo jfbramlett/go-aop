@@ -1,4 +1,4 @@
-[![Actions Status](https://github.com/jfbramlett/go-aop/workflows/{workflow_name}/badge.svg)](https://github.com/jfbramlett/go-aop/actions)
+[![Actions Status](https://github.com/jfbramlett/go-aop/workflows/Go/badge.svg)](https://github.com/jfbramlett/go-aop/actions)
 
 
 # go-aop
