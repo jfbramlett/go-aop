@@ -2,6 +2,8 @@ package tracing
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/opentracing/opentracing-go"
 
 	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
@@ -10,6 +12,7 @@ import (
 )
 
 const EndpointURL = "http://localhost:9411/api/v2/spans"
+const ctxRequestId = "requestId"
 
 func InitTracing(cfg TracingConfig) {
 	err := NewTracer(cfg)
@@ -43,10 +46,22 @@ func NewTracer(cfg TracingConfig) error {
 	return err
 }
 
-func StartSpanFromContext(ctx context.Context, name string, opts...opentracing.StartSpanOption) (opentracing.Span, context.Context) {
+func StartSpanFromContext(ctx context.Context, name string, opts ...opentracing.StartSpanOption) (opentracing.Span, context.Context) {
 	return opentracing.StartSpanFromContext(ctx, name, opts...)
 }
 
 func SpanFromContext(ctx context.Context) opentracing.Span {
 	return opentracing.SpanFromContext(ctx)
+}
+
+func GetTraceFromContext(ctx context.Context) string {
+	traceId := ctx.Value(ctxRequestId)
+	if traceId != nil {
+		return fmt.Sprintf("%v", traceId)
+	}
+	return "unknown"
+}
+
+func SetTraceInContext(ctx context.Context, traceId string) context.Context {
+	return context.WithValue(ctx, ctxRequestId, traceId)
 }

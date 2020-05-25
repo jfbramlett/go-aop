@@ -1,26 +1,34 @@
 package web
 
 import (
-	"github.com/jfbramlett/go-aop/pkg/logging"
 	"net/http"
+
+	"github.com/jfbramlett/go-aop/pkg/tracing"
+
+	"github.com/jfbramlett/go-aop/pkg/logging"
 )
 
 const (
-	endpoint = "endpoint"
+	endpoint      = "endpoint"
 	requestMethod = "requestMethod"
+	traceId       = "traceId"
 )
 
 type LoggingMiddleware struct {
-	method		string
+	method string
 }
-
 
 func (l *LoggingMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		ctx := r.Context()
+
+		traceId := tracing.GetTraceFromContext(r.Context())
+
 		logger, reqCtx := logging.Named(l.method).
 			WithField(endpoint, r.RequestURI).
 			And(requestMethod, r.Method).
+			And(traceId, traceId).
 			Create(r.Context())
 
 		logger.Info("request received")
