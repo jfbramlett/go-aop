@@ -21,12 +21,12 @@ type LoggingMiddleware struct {
 func (l *LoggingMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		traceId := tracing.GetTraceFromContext(r.Context())
+		requestId := tracing.GetTraceFromContext(r.Context())
 
 		logger, reqCtx := logging.Named(l.method).
 			WithField(endpoint, r.RequestURI).
 			And(requestMethod, r.Method).
-			And(traceId, traceId).
+			And(traceId, requestId).
 			Create(r.Context())
 
 		logger.Info("request received")

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	headerRequestId = "xxx-request-id"
+	HeaderRequestId = "xxx-request-id"
 )
 
 type TracingMiddleware struct {
@@ -19,7 +19,7 @@ type TracingMiddleware struct {
 func (l *TracingMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		requestId := r.Header.Get(headerRequestId)
+		requestId := r.Header.Get(HeaderRequestId)
 		if requestId == "" {
 			requestId = uuid.New().String()
 		}
