@@ -21,8 +21,6 @@ type LoggingMiddleware struct {
 func (l *LoggingMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		ctx := r.Context()
-
 		traceId := tracing.GetTraceFromContext(r.Context())
 
 		logger, reqCtx := logging.Named(l.method).
