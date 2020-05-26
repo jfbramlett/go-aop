@@ -32,7 +32,7 @@ func (t *AopTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	var err error
 	for _, p := range t.proxies {
 		r, err = p.Before(r.Context(), r)
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 	}
