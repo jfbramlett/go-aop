@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/jfbramlett/go-aop/pkg/logging"
 	"github.com/jfbramlett/go-aop/pkg/stackutils"
+	"github.com/sirupsen/logrus"
 )
 
 type loggingCtxKey struct{}
@@ -19,15 +20,15 @@ type loggingAdvice struct {
 }
 
 func (s *loggingAdvice) Before(ctx context.Context) context.Context {
-	method := ctx.Value(Method).(string)
-	logger, newCtx := logging.Named(stackutils.BasicQualifierFromMethod(method)).Create(ctx)
+	method := stackutils.BasicQualifierFromMethod(ctx.Value(Method).(string))
+
+	logger, newCtx := logging.UpdateInContext(ctx, logrus.Fields{"name": method})
 	logger.Debug("starting")
 	return newCtx
 }
 
 func (s *loggingAdvice) After(ctx context.Context, err error) {
-	method := ctx.Value(Method).(string)
-	logger, _ := logging.Named(stackutils.BasicQualifierFromMethod(method)).Create(ctx)
+	logger, _ := logging.LoggerFromContext(ctx)
 	if err != nil {
 		logger.Debugf("completed with error %s", err)
 	} else {

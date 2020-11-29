@@ -1,32 +1,35 @@
 package logging
 
-const (
-	InfoLevel  = "info"
-	DebugLevel = "debug"
-	WarnLevel  = "warn"
-	ErrorLevel = "error"
+import (
+	"context"
+	"github.com/sirupsen/logrus"
 )
 
-type Logger interface {
-	IsInfoEnabled() bool
-	Info(msg string)
-	Infof(fmt string, args ...interface{})
+type logKeyStruct struct{}
 
-	IsDebugEnabled() bool
-	Debug(msg string)
-	Debugf(fmt string, args ...interface{})
+var logKey = &logKeyStruct{}
 
-	IsWarnEnabled() bool
-	Warn(msg string)
-	Warnf(fmt string, args ...interface{})
 
-	IsErrorEnabled() bool
-	Error(err error, msg string)
-	Errorf(err error, fmt string, args ...interface{})
+// LoggerFromContex get the current logger from the context creating a new one if there is not one in the context
+func LoggerFromContext(ctx context.Context) (*logrus.Entry, context.Context) {
+	logger := ctx.Value(logKey)
+	if logger == nil {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+		logger = logrus.New()
+		ctx = context.WithValue(ctx, logKey, logger)
+	}
+
+	return logger.(*logrus.Entry), ctx
 }
 
-type LogConfig struct {
-	EnabledLevels		map[string]bool
+// ContextWithLogger adds the given logger to the context returning the updated context
+func ContextWithLogger(ctx context.Context, logger *logrus.Entry) context.Context {
+	return context.WithValue(ctx, logKey, logger)
 }
 
-var DefaultLogConfig = LogConfig{EnabledLevels: map[string]bool {InfoLevel: true, DebugLevel: true, WarnLevel: true, ErrorLevel: true}}
+// UpdateInContext updates the logger in the context with the given set of fields
+func UpdateInContext(ctx context.Context, fields logrus.Fields) (*logrus.Entry, context.Context) {
+	logger, ctx := LoggerFromContext(ctx)
+	logger = logger.WithFields(fields)
+	return logger, ContextWithLogger(ctx, logger)
+}

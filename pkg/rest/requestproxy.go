@@ -49,13 +49,13 @@ type LoggingRequestProxy struct {
 }
 
 func (l *LoggingRequestProxy) Before(ctx context.Context, r *http.Request) (*http.Request, error) {
-	logger := logging.GetLogger(ctx)
+	logger, ctx := logging.LoggerFromContext(ctx)
 	logger.Infof("start rest executing %v for %v", r.Method, r.URL)
 	return r, nil
 }
 
 func (l *LoggingRequestProxy) After(ctx context.Context, r *http.Response, err error) (*http.Response, error) {
-	logger := logging.GetLogger(ctx)
+	logger, ctx := logging.LoggerFromContext(ctx)
 	if err != nil {
 		logger.Error(err, "end rest - rest call failed")
 	} else {
